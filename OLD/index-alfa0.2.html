@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corrida 3D Multiplayer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        #uiContainer {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            z-index: 100;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none; /* Alterado de 'flex' para 'none' */
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            color: white;
+            flex-direction: column;
+        }
+        #endGameScreen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            color: white;
+            z-index: 300;
+            display: none;
+        }
+        #gameInfo {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 100;
+        }
+        .loader {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #3498db;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer"></div>
+    
+    <div id="uiContainer">
+        <input type="text" id="roomId" placeholder="ID da Sala">
+        <button onclick="generateRandomId()">Gerar ID</button>
+        <button id="copyIdBtn">Copiar ID</button>
+        <button onclick="joinRoom()">Jogar</button>
+        <div id="status"></div>
+    </div>
+    
+    <div id="gameInfo">
+        <div id="lapCounter">Volta: 0/3</div>
+        <div id="speedDisplay">Velocidade: 0 km/h</div>
+        <div id="positionDisplay">Posição: 1°</div>
+        <div id="nitroBarContainer" style="width: 100px; height: 20px; background: #333; margin-top: 10px;">
+            <div id="nitroBar" style="width: 100%; height: 100%; background: cyan;"></div>
+        </div>
+    </div>
+    
+    <div id="loadingOverlay">
+        <div class="loader"></div>
+        <div id="loadingText">Carregando...</div>
+    </div>
+    
+    <div id="endGameScreen">
+        <h2 id="endGameMessage"></h2>
+        <div id="raceResults"></div>
+        <button id="rematchBtn">Próxima Corrida</button>
+        <button id="exitBtn">Sair</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Variáveis globais
+        let playerId = null;
+        let players = {};
+        let keys = {};
+        let ws = null;
+        let peerConnection = null;
+        let dataChannel = null;
+        let lastMoveSent = 0;
+        let gameActive = true;
+        let currentRoomId = null;
+        let playerMoney = 1000;
+        let selectedCar = 'car1';
+        let selectedTrack = 'track1';
+        let laps = { 0: 0, 1: 0 };
+        let positions = { 0: 1, 1: 1 };
+        let raceFinished = false;
+        let startTime = null;
+        let finishTimes = {};
+        let opponentTargetPosition = {}; // Adicionado para interpolação
+        let opponentTargetRotation = {}; // Adicionado para interpolação
+        let interpolationFactor = 0.1; // Fator de suavização (0 a 1)
+
+        // Three.js variables
+        let scene, camera, renderer, carModels = {};
+        let playerCar = null;
+        const SERVER_URL = 'wss://heroic-hope-production-bbdc.up.railway.app';
+        const rtcConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                {
+                    urls: 'turn:turn.speed.cloudflare.com:50000',
+                    username: 'd1a7f09155fb30285724a3a056ca2edf17956674aff12909ff133dcec42994b2614cdd0a380a1b65124def1e3d0208543050d14b77d1a7533f9da35893ee2ed9',
+                    credential: 'aba9b169546eb6dcc7bfb1cdf34544cf95b5161d602e3b5fa7c8342b2e9802fb',
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:80',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject',
+                },
+            ],
+        };
+
+        // Inicializar Three.js
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
+            
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 5, -10);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.getElementById('gameContainer').appendChild(renderer.domElement);
+            
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 20, 15);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            
+            createTrack();
+            createCarModels();
+            window.addEventListener('resize', onWindowResize, false);
+            animate();
+        }
+        
+        function createTrack() {
+            const trackGeometry = new THREE.BoxGeometry(30, 0.5, 100);
+            const trackMaterial = new THREE.MeshStandardMaterial({ color: 0x444444 });
+            const track = new THREE.Mesh(trackGeometry, trackMaterial);
+            track.position.y = -1;
+            track.receiveShadow = true;
+            scene.add(track);
+            
+            const grassGeometry = new THREE.BoxGeometry(100, 0.5, 140);
+            const grassMaterial = new THREE.MeshStandardMaterial({ color: 0x2e8b57 });
+            const grass = new THREE.Mesh(grassGeometry, grassMaterial);
+            grass.position.y = -1.1;
+            grass.receiveShadow = true;
+            scene.add(grass);
+            
+            const lineMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            for (let i = -40; i <= 40; i += 10) {
+                const lineGeometry = new THREE.BoxGeometry(1, 0.1, 3);
+                const line = new THREE.Mesh(lineGeometry, lineMaterial);
+                line.position.z = i;
+                line.position.y = -0.75;
+                line.receiveShadow = true;
+                scene.add(line);
+            }
+            
+            const obstacleMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+            for (let i = 0; i < 5; i++) {
+                const obstacleGeometry = new THREE.BoxGeometry(2, 1, 1);
+                const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
+                obstacle.position.set(
+                    (Math.random() - 0.5) * 20,
+                    0,
+                    (Math.random() - 0.5) * 80
+                );
+                obstacle.castShadow = true;
+                scene.add(obstacle);
+            }
+        }
+        
+        function createCarModels() {
+            const car1 = new THREE.Group();
+            const body1 = new THREE.Mesh(
+                new THREE.BoxGeometry(3, 1, 5),
+                new THREE.MeshStandardMaterial({ color: 0xff0000 })
+            );
+            body1.position.y = 0.5;
+            body1.castShadow = true;
+            car1.add(body1);
+            
+            const cabin1 = new THREE.Mesh(
+                new THREE.BoxGeometry(2, 0.8, 2),
+                new THREE.MeshStandardMaterial({ color: 0x333333 })
+            );
+            cabin1.position.set(0, 1.2, -0.5);
+            cabin1.castShadow = true;
+            car1.add(cabin1);
+            
+            const wheelGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.3, 16);
+            wheelGeometry.rotateZ(Math.PI / 2);
+            const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+            
+            for (let i = -1; i <= 1; i += 2) {
+                for (let j = -1; j <= 1; j += 2) {
+                    const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                    wheel.position.set(i * 1.5, 0.3, j * 1.8);
+                    wheel.castShadow = true;
+                    car1.add(wheel);
+                }
+            }
+            
+            const car2 = car1.clone();
+            car2.traverse((child) => {
+                if (child.isMesh && child.material.color) {
+                    child.material = child.material.clone();
+                    child.material.color.set(0x0000ff);
+                }
+            });
+            
+            const car3 = car1.clone();
+            car3.traverse((child) => {
+                if (child.isMesh && child.material.color) {
+                    child.material = child.material.clone();
+                    child.material.color.set(0x00ff00);
+                }
+            });
+            
+            carModels['car1'] = car1;
+            carModels['car2'] = car2;
+            carModels['car3'] = car3;
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+            
+            if (playerCar) {
+                const cameraOffset = new THREE.Vector3(0, 3, -8);
+                cameraOffset.applyQuaternion(playerCar.quaternion);
+                camera.position.copy(playerCar.position).add(cameraOffset);
+                camera.lookAt(playerCar.position);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            initThreeJS();
+            
+            const statusDiv = document.getElementById('status');
+            const roomIdInput = document.getElementById('roomId');
+            const endGameMessage = document.getElementById('endGameMessage');
+            const rematchBtn = document.getElementById('rematchBtn');
+            const exitBtn = document.getElementById('exitBtn');
+            const raceResults = document.getElementById('raceResults');
+            
+            loadGameData();
+            
+            function updateStatus(message) {
+                statusDiv.textContent = message;
+            }
+            
+            function showEndGameScreen(message) {
+                document.getElementById('endGameScreen').style.display = 'block';
+                endGameMessage.textContent = message;
+                
+                let resultsHTML = '<h3>Resultados:</h3>';
+                Object.keys(finishTimes).sort((a, b) => finishTimes[a] - finishTimes[b]).forEach(playerId => {
+                    const time = (finishTimes[playerId] / 1000).toFixed(2);
+                    resultsHTML += `<p>Jogador ${parseInt(playerId) + 1}: ${time}s</p>`;
+                });
+                
+                raceResults.innerHTML = resultsHTML;
+            }
+            
+            function closeConnections() {
+                if (dataChannel) {
+                    dataChannel.close();
+                    dataChannel = null;
+                }
+                if (peerConnection) {
+                    peerConnection.close();
+                    peerConnection = null;
+                }
+                if (ws) {
+                    ws.close();
+                    ws = null;
+                }
+            }
+            
+            window.joinRoom = function () {
+                const roomId = roomIdInput.value.trim();
+                if (!roomId) {
+                    console.error('Por favor, insira um ID de sala');
+                    updateStatus('Por favor, insira um ID de sala');
+                    return;
+                }
+                
+                currentRoomId = roomId;
+                updateStatus('Conectando ao servidor...');
+                document.getElementById('loadingOverlay').style.display = 'flex';
+                ws = new WebSocket(SERVER_URL);
+                
+                ws.onopen = () => {
+                    console.log('WebSocket conectado');
+                    updateStatus('Aguardando o segundo jogador...');
+                    ws.send(JSON.stringify({ 
+                        type: 'join', 
+                        roomId,
+                        car: selectedCar
+                    }));
+                };
+                
+                ws.onerror = (error) => {
+                    console.error('Erro no WebSocket:', error);
+                    updateStatus('Erro ao conectar ao servidor. Tente novamente.');
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                };
+                
+                ws.onclose = (event) => {
+                    console.log(`WebSocket fechado. Código: ${event.code}, Motivo: ${event.reason}`);
+                    updateStatus('Conexão com o servidor perdida.');
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                };
+                
+                ws.onmessage = async (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('Mensagem recebida do servidor:', data);
+                        
+                        if (data.type === 'start') {
+                            playerId = data.playerId;
+                            console.log(`Iniciando jogo como jogador ${playerId}`);
+                            updateStatus(`Jogador ${playerId} conectado. Iniciando jogo...`);
+                            initPeerConnection();
+                            if (playerId === 0) {
+                                dataChannel = peerConnection.createDataChannel('game');
+                                setupDataChannel();
+                                const offer = await peerConnection.createOffer();
+                                await peerConnection.setLocalDescription(offer);
+                                console.log('Enviando oferta:', offer);
+                                ws.send(JSON.stringify({ type: 'offer', sdp: offer }));
+                            }
+                        } else if (data.type === 'offer') {
+                            console.log('Recebida oferta:', data.sdp);
+                            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                            const answer = await peerConnection.createAnswer();
+                            await peerConnection.setLocalDescription(answer);
+                            console.log('Enviando resposta:', answer);
+                            ws.send(JSON.stringify({ type: 'answer', sdp: answer }));
+                        } else if (data.type === 'answer') {
+                            console.log('Recebida resposta:', data.sdp);
+                            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                        } else if (data.type === 'ice') {
+                            console.log('Recebido candidato ICE:', data.candidate);
+                            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                        } else if (data.type === 'error') {
+                            console.error('Erro do servidor:', data.message);
+                            updateStatus(data.message);
+                            document.getElementById('loadingOverlay').style.display = 'none';
+                        }
+                    } catch (error) {
+                        console.error('Erro ao processar mensagem do servidor:', error);
+                        updateStatus('Erro ao processar mensagem do servidor.');
+                        document.getElementById('loadingOverlay').style.display = 'none';
+                    }
+                };
+            };
+            
+            function initPeerConnection() {
+                peerConnection = new RTCPeerConnection(rtcConfig);
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        console.log('Candidato ICE gerado:', event.candidate);
+                        ws.send(JSON.stringify({ type: 'ice', candidate: event.candidate }));
+                    } else {
+                        console.log('Todos os candidatos ICE foram gerados.');
+                    }
+                };
+                
+                peerConnection.oniceconnectionstatechange = () => {
+                    console.log('Estado ICE:', peerConnection.iceConnectionState);
+                    updateStatus(`Estado da conexão: ${peerConnection.iceConnectionState}`);
+                    if (peerConnection.iceConnectionState === 'failed') {
+                        console.error('Conexão ICE falhou. Verifique servidores TURN ou configuração de rede.');
+                        updateStatus('Falha na conexão P2P. Tente novamente ou verifique sua rede.');
+                        document.getElementById('loadingOverlay').style.display = 'none';
+                    } else if (peerConnection.iceConnectionState === 'disconnected') {
+                        console.log('Conexão ICE desconectada. Tentando reconectar...');
+                        updateStatus('Conexão P2P desconectada. Tentando reconectar...');
+                    } else if (peerConnection.iceConnectionState === 'connected') {
+                        console.log('Conexão ICE estabelecida com sucesso!');
+                    }
+                };
+                
+                peerConnection.onicegatheringstatechange = () => {
+                    console.log('Estado de coleta ICE:', peerConnection.iceGatheringState);
+                };
+                
+                peerConnection.ondatachannel = (event) => {
+                    dataChannel = event.channel;
+                    setupDataChannel();
+                };
+            }
+            
+            function setupDataChannel() {
+                dataChannel.onopen = () => {
+                    console.log('DataChannel aberto');
+                    updateStatus('Conexão P2P estabelecida. Jogo iniciado!');
+                    startGame();
+                };
+                
+                dataChannel.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('Mensagem recebida no DataChannel:', data);
+                        
+                        if (data.type === 'move') {
+                            if (players[data.playerId]) {
+                                opponentTargetPosition[data.playerId] = {
+                                    x: data.position.x,
+                                    z: data.position.z
+                                };
+                                opponentTargetRotation[data.playerId] = data.position.rotation;
+                                players[data.playerId].x = data.position.x;
+                                players[data.playerId].z = data.position.z;
+                                players[data.playerId].rotation = data.position.rotation;
+                            }
+                        } else if (data.type === 'lap') {
+                            laps[data.playerId] = data.lapCount;
+                            positions[data.playerId] = data.position;
+                            
+                            if (playerId.toString() === data.playerId) {
+                                document.getElementById('lapCounter').textContent = `Volta: ${data.lapCount}/3`;
+                                document.getElementById('positionDisplay').textContent = `Posição: ${data.position}°`;
+                            }
+                            
+                            if (data.lapCount >= 3 && !raceFinished) {
+                                finishTimes[data.playerId] = Date.now() - startTime;
+                                raceFinished = true;
+                                
+                                if (data.playerId !== playerId) {
+                                    showEndGameScreen(`Jogador ${parseInt(data.playerId) + 1} venceu a corrida!`);
+                                }
+                            }
+                        } else if (data.type === 'raceOver') {
+                            showEndGameScreen(`Jogador ${parseInt(data.winnerId) + 1} venceu a corrida!`);
+                        } else if (data.type === 'restart') {
+                            performGameRestart();
+                        }
+                    } catch (error) {
+                        console.error('Erro ao processar mensagem do DataChannel:', error);
+                    }
+                };
+                
+                dataChannel.onerror = (error) => {
+                    console.error('Erro no DataChannel:', error);
+                    updateStatus('Erro na conexão P2P.');
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                };
+                
+                dataChannel.onclose = () => {
+                    console.log('DataChannel fechado');
+                    updateStatus('Conexão P2P fechada.');
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                };
+            }
+            
+            function startGame() {
+                players = {};
+                laps = { 0: 0, 1: 0 };
+                positions = { 0: 1, 1: 1 };
+                raceFinished = false;
+                startTime = Date.now();
+                finishTimes = {};
+                gameActive = true;
+                opponentTargetPosition = {};
+                opponentTargetRotation = {};
+                
+                players[playerId] = {
+                    x: playerId === 0 ? -5 : 5,
+                    z: 0,
+                    rotation: 0,
+                    speed: 0,
+                    maxSpeed: selectedCar === 'car1' ? 0.2 : selectedCar === 'car2' ? 0.15 : 0.25,
+                    acceleration: selectedCar === 'car1' ? 0.005 : selectedCar === 'car2' ? 0.004 : 0.006,
+                    handling: selectedCar === 'car1' ? 0.03 : selectedCar === 'car2' ? 0.02 : 0.04,
+                    nitro: 100,
+                    lap: 0,
+                    lastCheckpoint: 0
+                };
+                
+                playerCar = carModels[selectedCar].clone();
+                playerCar.position.set(players[playerId].x, 0, players[playerId].z);
+                scene.add(playerCar);
+                carModels[`player${playerId}`] = playerCar;
+                
+                const opponentId = playerId === 0 ? 1 : 0;
+                const opponentCar = carModels[selectedCar === 'car1' ? 'car2' : 'car1'].clone();
+                const opponentPositionX = players[playerId].x + (playerId === 0 ? 10 : -10);
+                opponentCar.position.set(opponentPositionX, 0, players[playerId].z);
+                scene.add(opponentCar);
+                carModels[`player${opponentId}`] = opponentCar;
+                players[opponentId] = {
+                    x: opponentPositionX,
+                    z: players[playerId].z,
+                    rotation: 0
+                };
+                
+                opponentTargetPosition[opponentId] = { x: opponentPositionX, z: players[playerId].z };
+                opponentTargetRotation[opponentId] = 0;
+                
+                document.getElementById('loadingOverlay').style.display = 'none';
+                gameLoop();
+            }
+            
+            function restartGame() {
+                if (dataChannel?.readyState === 'open') {
+                    dataChannel.send(JSON.stringify({ type: 'restart' }));
+                    performGameRestart();
+                } else {
+                    console.warn('DataChannel não está aberto. Reconectando...');
+                    roomIdInput.value = currentRoomId;
+                    joinRoom();
+                }
+            }
+            
+            function performGameRestart() {
+                players = {};
+                laps = { 0: 0, 1: 0 };
+                positions = { 0: 1, 1: 1 };
+                raceFinished = false;
+                startTime = Date.now();
+                finishTimes = {};
+                gameActive = true;
+                opponentTargetPosition = {};
+                opponentTargetRotation = {};
+                
+                players[playerId] = {
+                    x: playerId === 0 ? -5 : 5,
+                    z: 0,
+                    rotation: 0,
+                    speed: 0,
+                    maxSpeed: selectedCar === 'car1' ? 0.2 : selectedCar === 'car2' ? 0.15 : 0.25,
+                    acceleration: selectedCar === 'car1' ? 0.005 : selectedCar === 'car2' ? 0.004 : 0.006,
+                    handling: selectedCar === 'car1' ? 0.03 : selectedCar === 'car2' ? 0.02 : 0.04,
+                    nitro: 100,
+                    lap: 0,
+                    lastCheckpoint: 0
+                };
+                
+                playerCar.position.set(players[playerId].x, 0, players[playerId].z);
+                playerCar.rotation.y = players[playerId].rotation;
+                
+                const opponentId = playerId === 0 ? 1 : 0;
+                carModels[`player${opponentId}`].position.set(players[playerId].x + (playerId === 0 ? 10 : -10), 0, players[playerId].z);
+                carModels[`player${opponentId}`].rotation.y = 0;
+                
+                players[opponentId] = {
+                    x: players[playerId].x + (playerId === 0 ? 10 : -10),
+                    z: players[playerId].z,
+                    rotation: 0
+                };
+                
+                opponentTargetPosition[opponentId] = { x: players[playerId].x + (playerId === 0 ? 10 : -10), z: players[playerId].z };
+                opponentTargetRotation[opponentId] = 0;
+                
+                document.getElementById('endGameScreen').style.display = 'none';
+                document.getElementById('lapCounter').textContent = `Volta: 0/3`;
+                document.getElementById('positionDisplay').textContent = `Posição: 1°`;
+                document.getElementById('speedDisplay').textContent = `Velocidade: 0 km/h`;
+                document.getElementById('nitroBar').style.width = '100%';
+            }
+            
+            document.addEventListener('keydown', (e) => {
+                keys[e.code] = true;
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                keys[e.code] = false;
+            });
+            
+            rematchBtn.addEventListener('click', () => {
+                restartGame();
+            });
+            
+            exitBtn.addEventListener('click', () => {
+                closeConnections();
+                players = {};
+                gameActive = false;
+                document.getElementById('endGameScreen').style.display = 'none';
+                updateStatus('Jogo encerrado. Digite um ID de sala para jogar novamente.');
+            });
+            
+            function gameLoop() {
+                if (!gameActive || !players[playerId]) return;
+                
+                const player = players[playerId];
+                
+                if (keys['ArrowUp'] || keys['KeyW']) {
+                    player.speed += player.acceleration;
+                    if (player.speed > player.maxSpeed) player.speed = player.maxSpeed;
+                }
+                
+                if (keys['ArrowDown'] || keys['KeyS']) {
+                    player.speed -= player.acceleration * 0.7;
+                    if (player.speed < -player.maxSpeed * 0.5) player.speed = -player.maxSpeed * 0.5;
+                }
+                
+                if (keys['ArrowLeft'] || keys['KeyA']) {
+                    player.rotation += player.handling * (player.speed > 0 ? 1 : -1);
+                }
+                
+                if (keys['ArrowRight'] || keys['KeyD']) {
+                    player.rotation -= player.handling * (player.speed > 0 ? 1 : -1);
+                }
+                
+                if ((keys['Space'] || keys['ShiftLeft']) && player.nitro > 0) {
+                    player.speed *= 1.5;
+                    player.nitro -= 0.5;
+                    document.getElementById('nitroBar').style.width = `${player.nitro}%`;
+                }
+                
+                player.x += Math.sin(player.rotation) * player.speed;
+                player.z += Math.cos(player.rotation) * player.speed;
+                
+                player.speed *= 0.98;
+                if (Math.abs(player.speed) < 0.001) player.speed = 0;
+                
+                playerCar.position.set(player.x, 0, player.z);
+                playerCar.rotation.y = player.rotation;
+                
+                document.getElementById('speedDisplay').textContent = `Velocidade: ${Math.abs(Math.round(player.speed * 500))} km/h`;
+                
+                if (player.z > 40 && player.lastCheckpoint === 0) {
+                    player.lap++;
+                    player.lastCheckpoint = 1;
+                    
+                    laps[playerId] = player.lap;
+                    document.getElementById('lapCounter').textContent = `Volta: ${player.lap}/3`;
+                    
+                    if (dataChannel?.readyState === 'open') {
+                        dataChannel.send(JSON.stringify({ 
+                            type: 'lap', 
+                            playerId,
+                            lapCount: player.lap,
+                            position: positions[playerId]
+                        }));
+                    }
+                    
+                    if (player.lap >= 3 && !raceFinished) {
+                        finishTimes[playerId] = Date.now() - startTime;
+                        raceFinished = true;
+                        
+                        const reward = playerId === 0 ? 500 : 300;
+                        playerMoney += reward;
+                        saveGameData();
+                        
+                        showEndGameScreen('Você venceu a corrida!');
+                        
+                        if (dataChannel?.readyState === 'open') {
+                            dataChannel.send(JSON.stringify({ 
+                                type: 'raceOver', 
+                                winnerId: playerId
+                            }));
+                        }
+                    }
+                } else if (player.z < -40) {
+                    player.lastCheckpoint = 0;
+                }
+                
+                const opponentId = playerId === 0 ? 1 : 0;
+                if (carModels[`player${opponentId}`] && opponentTargetPosition[opponentId]) {
+                    const currentPos = carModels[`player${opponentId}`].position;
+                    const targetPos = opponentTargetPosition[opponentId];
+                    const currentRot = carModels[`player${opponentId}`].rotation;
+                    
+                    currentPos.x += (targetPos.x - currentPos.x) * interpolationFactor;
+                    currentPos.z += (targetPos.z - currentPos.z) * interpolationFactor;
+                    currentRot.y += (opponentTargetRotation[opponentId] - currentRot.y) * interpolationFactor;
+                    
+                    carModels[`player${opponentId}`].position.set(currentPos.x, 0, currentPos.z);
+                    carModels[`player${opponentId}`].rotation.y = currentRot.y;
+                }
+                
+                const now = Date.now();
+                if (now - lastMoveSent >= 16 && dataChannel?.readyState === 'open') {
+                    dataChannel.send(JSON.stringify({ 
+                        type: 'move', 
+                        playerId, 
+                        position: {
+                            x: player.x,
+                            z: player.z,
+                            rotation: player.rotation
+                        } 
+                    }));
+                    lastMoveSent = now;
+                }
+                
+                requestAnimationFrame(gameLoop);
+            }
+            
+            function loadGameData() {
+                const savedData = localStorage.getItem('raceGameData');
+                if (savedData) {
+                    const data = JSON.parse(savedData);
+                    playerMoney = data.money || 1000;
+                    selectedCar = data.car || 'car1';
+                }
+            }
+            
+            function saveGameData() {
+                const gameData = {
+                    money: playerMoney,
+                    car: selectedCar
+                };
+                localStorage.setItem('raceGameData', JSON.stringify(gameData));
+            }
+            
+            window.generateRandomId = function () {
+                const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                let result = '';
+                for (let i = 0; i < 5; i++) {
+                    result += characters.charAt(Math.floor(Math.random() * characters.length));
+                }
+                roomIdInput.value = result;
+            };
+            
+            document.getElementById('copyIdBtn').addEventListener('click', () => {
+                roomIdInput.select();
+                try {
+                    document.execCommand('copy');
+                    updateStatus('ID copiado com sucesso!');
+                } catch (err) {
+                    console.error('Erro ao copiar ID:', err);
+                    updateStatus('Erro ao copiar ID.');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

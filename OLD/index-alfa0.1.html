@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Corrida P2P</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #222;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      overflow: hidden;
+    }
+    
+    #gameCanvas {
+      background: linear-gradient(to bottom, #1a2980, #26d0ce);
+      border: 2px solid #444;
+      margin-top: 10px;
+    }
+    
+    #controls {
+      padding: 20px;
+      background: #333;
+      border-radius: 10px;
+      max-width: 500px;
+      margin: 20px auto;
+    }
+    
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      border: none;
+      border-radius: 5px;
+    }
+    
+    button {
+      background: #4CAF50;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    
+    button:hover {
+      background: #45a049;
+    }
+    
+    #loadingOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+    
+    .loader {
+      border: 16px solid #f3f3f3;
+      border-top: 16px solid #3498db;
+      border-radius: 50%;
+      width: 120px;
+      height: 120px;
+      animation: spin 2s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    #carCustomization {
+      display: none;
+      background: #444;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 15px;
+    }
+    
+    .car-option {
+      display: inline-block;
+      margin: 10px;
+      cursor: pointer;
+    }
+    
+    .car-option img {
+      width: 80px;
+      height: 40px;
+      border: 2px solid transparent;
+    }
+    
+    .car-option.selected img {
+      border-color: #4CAF50;
+    }
+    
+    #endGameScreen {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      color: white;
+      z-index: 200;
+    }
+    
+    .scoreboard-line {
+      display: block;
+      margin: 5px 0;
+    }
+    
+    #trackSelection {
+      display: none;
+      margin-top: 15px;
+    }
+    
+    .track-option {
+      display: inline-block;
+      margin: 10px;
+      cursor: pointer;
+    }
+    
+    .track-option img {
+      width: 120px;
+      height: 80px;
+      border: 2px solid transparent;
+    }
+    
+    .track-option.selected img {
+      border-color: #FFD700;
+    }
+    
+    #moneyDisplay {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.7);
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div id="loadingOverlay" style="display: none;">
+    <div class="loader"></div>
+  </div>
+  
+  <div id="moneyDisplay">Dinheiro: $1000</div>
+  
+  <div id="controls">
+    <h2>Corrida Multiplayer P2P</h2>
+    <input type="text" id="roomId" placeholder="ID da Sala">
+    <button onclick="generateRandomId()">Gerar ID</button>
+    <button id="copyIdBtn" style="background-color: #007bff;">Copiar ID</button>
+    <button onclick="joinRoom()">Jogar</button>
+    
+    <div id="carCustomization">
+      <h3>Personalize seu Carro</h3>
+      <div class="car-option" onclick="selectCar('car1', this)">
+        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA4MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3QgeD0iMTAiIHk9IjEwIiB3aWR0aD0iNjAiIGhlaWdodD0iMjAiIHJ4PSI1IiByeT0iNSIgZmlsbD0iI0ZGMDAwMCIvPgo8cmVjdCB4PSIyMCIgeT0iNSIgd2lkdGg9IjQwIiBoZWlnaHQ9IjUiIHJ4PSIyIiByeT0iMiIgZmlsbD0iI0ZGMDAwMCIvPgo8Y2lyY2xlIGN4PSIyMCIgY3k9IjMwIiByPSI1IiBmaWxsPSIjMzMzIi8+CjxjaXJjbGUgY3g9IjYwIiBjeT0iMzAiIHI9IjUiIGZpbGw9IiMzMzMiLz4KPC9zdmc+" alt="Carro Esportivo">
+        <div>Esportivo</div>
+      </div>
+      <div class="car-option" onclick="selectCar('car2', this)">
+        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA4MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3QgeD0iNSIgeT0iMTUiIHdpZHRoPSI3MCIgaGVpZ2h0PSIxNSIgcng9IjciIHJ5PSI3IiBmaWxsPSIjMDA4MEZGIi8+CjxyZWN0IHg9IjE1IiB5PSI4IiB3aWR0aD0iNTAiIGhlaWdodD0iNyIgcng9IjMiIHJ5PSIzIiBmaWxsPSIjMDA4MEZGIi8+CjxjaXJjbGUgY3g9IjIwIiBjeT0iMzAiIHI9IjUiIGZpbGw9IiMzMzMiLz4KPGNpcmNsZSBjeD0iNjAiIGN5PSIzMCIgcj0iNSIgZmlsbD0iIzMzMyIvPgo8L3N2Zz4=" alt="Carro Clássico">
+        <div>Clássico</div>
+      </div>
+      <div class="car-option" onclick="selectCar('car3', this)">
+        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA4MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3QgeD0iMTUiIHk9IjEyIiB3aWR0aD0iNTAiIGhlaWdodD0iMTYiIHJ4PSI4IiByeT0iOCIgZmlsbD0iIzAwRjYwMCIvPgo8cmVjdCB4PSIyMCIgeT0iNyIgd2lkdGg9IjQwIiBoZWlnaHQ9IjUiIHJ4PSIyIiByeT0iMiIgZmlsbD0iIzAwRjYwMCIvPgo8Y2lyY2xlIGN4PSIyMCIgY3k9IjI4IiByPSI2IiBmaWxsPSIjMzMzIi8+CjxjaXJjbGUgY3g9IjYwIiBjeT0iMjgiIHI9IjYiIGZpbGw9IiMzMzMiLz4KPC9zdmc+" alt="Carro de Corrida">
+        <div>Corrida</div>
+      </div>
+      <button onclick="confirmCarSelection()">Confirmar</button>
+    </div>
+    
+    <div id="trackSelection">
+      <h3>Selecione a Pista</h3>
+      <div class="track-option" onclick="selectTrack('track1', this)">
+        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjgwIiB2aWV3Qm94PSIwIDAgMTIwIDgwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMjZhMjg1Ii8+CjxwYXRoIGQ9Ik0xMCAxMCBDNDAgMjAsODAgMTUsMTEwIDMwIEwxMTAgNTAgQzgwIDY1LDQwIDcwLDEwIDYwIEwxMCAxMFoiIGZpbGw9IiM0Y2I0NTEiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIyIi8+CjxwYXRoIGQ9Ik0yMCAxNSBDNDUgMjUsNzUgMjAsMTA1IDM1IEwxMDUgNDUgQzc1IDYwLDQ1IDY1LDIwIDU1IEwyMCAxNVoiIGZpbGw9IiM0Y2I0NTEiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIyIi8+Cjwvc3ZnPg==" alt="Pista Oval">
+        <div>Pista Oval</div>
+      </div>
+      <div class="track-option" onclick="selectTrack('track2', this)">
+        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjgwIiB2aWV3Qm94PSIwIDAgMTIwIDgwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjODA0MDIwIi8+CjxwYXRoIGQ9Ik0xMCA0MCBDMzAgMTAsNzAgMTAsMTEwIDQwIEM5MCA3MCw1MCA4MCwxMCA2MCBaIiBmaWxsPSIjYWI3YzQxIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIvPgo8cGF0aCBkPSJNMjAgNDAgQzM1IDIwLDc1IDIwLDkwIDQwIEM3NSA2MCw0NSA3MCwyMCA2MCBaIiBmaWxsPSIjYWI3YzQxIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIvPgo8L3N2Zz4=" alt="Pista Montanha">
+        <div>Pista Montanha</div>
+      </div>
+      <button onclick="startRace()">Iniciar Corrida</button>
+    </div>
+    
+    <p id="joinInstructions">
+      <strong>Como jogar:</strong><br>
+      1. Gere ou cole um ID de sala<br>
+      2. Personalize seu carro<br>
+      3. Selecione uma pista<br>
+      4. Conecte-se com seus amigos!<br><br>
+      <strong>Controles:</strong><br>
+      W/A/S/D ou Setas para dirigir<br>
+      Espaço para nitro<br><br>
+      Complete 3 voltas para vencer!
+    </p>
+  </div>
+  
+  <div id="status" style="color: white; margin-top: 10px;"></div>
+  
+  <canvas id="gameCanvas"></canvas>
+  
+  <div id="endGameScreen">
+    <h2 id="endGameMessage"></h2>
+    <div id="raceResults"></div>
+    <button id="rematchBtn">Próxima Corrida</button>
+    <button id="exitBtn">Sair</button>
+  </div>
+
+  <script>
+    // Variáveis globais
+    let playerId = null;
+    let players = {};
+    let keys = {};
+    let ws = null;
+    let peerConnection = null;
+    let dataChannel = null;
+    let lastMoveSent = 0;
+    let gameActive = true;
+    let currentRoomId = null;
+    let playerMoney = 1000;
+    let selectedCar = 'car1';
+    let selectedTrack = 'track1';
+    let laps = { 0: 0, 1: 0 };
+    let positions = { 0: 1, 1: 1 };
+    let raceFinished = false;
+    let startTime = null;
+    let finishTimes = {};
+
+    const SERVER_URL = 'wss://heroic-hope-production-bbdc.up.railway.app';
+    const rtcConfig = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        {
+          urls: 'turn:turn.speed.cloudflare.com:50000',
+          username: 'd1a7f09155fb30285724a3a056ca2edf17956674aff12909ff133dcec42994b2614cdd0a380a1b65124def1e3d0208543050d14b77d1a7533f9da35893ee2ed9',
+          credential: 'aba9b169546eb6dcc7bfb1cdf34544cf95b5161d602e3b5fa7c8342b2e9802fb',
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:80',
+          username: 'openrelayproject',
+          credential: 'openrelayproject',
+        },
+      ],
+    };
+
+    // Carregar dados salvos
+    function loadGameData() {
+      const savedData = localStorage.getItem('raceGameData');
+      if (savedData) {
+        const data = JSON.parse(savedData);
+        playerMoney = data.money || 1000;
+        selectedCar = data.car || 'car1';
+        updateMoneyDisplay();
+      }
+    }
+
+    // Salvar dados do jogo
+    function saveGameData() {
+      const gameData = {
+        money: playerMoney,
+        car: selectedCar
+      };
+      localStorage.setItem('raceGameData', JSON.stringify(gameData));
+    }
+
+    // Atualizar exibição de dinheiro
+    function updateMoneyDisplay() {
+      document.getElementById('moneyDisplay').textContent = `Dinheiro: $${playerMoney}`;
+    }
+
+    // Selecionar carro
+    function selectCar(carId, element) {
+      selectedCar = carId;
+      document.querySelectorAll('.car-option').forEach(el => {
+        el.classList.remove('selected');
+      });
+      element.classList.add('selected');
+    }
+
+    // Selecionar pista
+    function selectTrack(trackId, element) {
+      selectedTrack = trackId;
+      document.querySelectorAll('.track-option').forEach(el => {
+        el.classList.remove('selected');
+      });
+      element.classList.add('selected');
+    }
+
+    // Confirmar seleção de carro
+    function confirmCarSelection() {
+      document.getElementById('carCustomization').style.display = 'none';
+      document.getElementById('trackSelection').style.display = 'block';
+    }
+
+    // Iniciar corrida
+    function startRace() {
+      document.getElementById('trackSelection').style.display = 'none';
+      joinRoom();
+    }
+
+    // Esperar o DOM carregar antes de acessar elementos
+    document.addEventListener('DOMContentLoaded', () => {
+      loadGameData();
+      updateMoneyDisplay();
+      document.getElementById('carCustomization').style.display = 'block';
+      
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 800;
+      canvas.height = 600;
+
+      const roomIdInput = document.getElementById('roomId');
+      const statusDiv = document.getElementById('status');
+      const endGameScreen = document.getElementById('endGameScreen');
+      const endGameMessage = document.getElementById('endGameMessage');
+      const rematchBtn = document.getElementById('rematchBtn');
+      const exitBtn = document.getElementById('exitBtn');
+      const raceResults = document.getElementById('raceResults');
+
+      // Função para atualizar o status
+      function updateStatus(message) {
+        statusDiv.textContent = message;
+      }
+
+      // Função para mostrar a tela de fim de jogo
+      function showEndGameScreen(message) {
+        gameActive = false;
+        endGameMessage.textContent = message;
+        
+        // Exibir resultados da corrida
+        let resultsHTML = '<h3>Resultados:</h3>';
+        Object.keys(finishTimes).sort((a, b) => finishTimes[a] - finishTimes[b]).forEach(playerId => {
+          const time = (finishTimes[playerId] / 1000).toFixed(2);
+          resultsHTML += `<p>Jogador ${parseInt(playerId) + 1}: ${time}s</p>`;
+        });
+        
+        raceResults.innerHTML = resultsHTML;
+        endGameScreen.style.display = 'block';
+      }
+
+      // Função para fechar conexões
+      function closeConnections() {
+        if (dataChannel) {
+          dataChannel.close();
+          dataChannel = null;
+        }
+        if (peerConnection) {
+          peerConnection.close();
+          peerConnection = null;
+        }
+        if (ws) {
+          ws.close();
+          ws = null;
+        }
+      }
+
+      // Função para entrar na sala
+      window.joinRoom = function () {
+        const roomId = roomIdInput.value.trim();
+        if (!roomId) {
+          console.error('Por favor, insira um ID de sala');
+          updateStatus('Por favor, insira um ID de sala');
+          return;
+        }
+
+        currentRoomId = roomId;
+        updateStatus('Conectando ao servidor...');
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        ws = new WebSocket(SERVER_URL);
+        
+        ws.onopen = () => {
+          console.log('WebSocket conectado');
+          updateStatus('Aguardando o segundo jogador...');
+          ws.send(JSON.stringify({ 
+            type: 'join', 
+            roomId,
+            car: selectedCar,
+            track: selectedTrack
+          }));
+        };
+        
+        ws.onerror = (error) => {
+          console.error('Erro no WebSocket:', error);
+          updateStatus('Erro ao conectar ao servidor. Tente novamente.');
+          document.getElementById('loadingOverlay').style.display = 'none';
+        };
+        
+        ws.onclose = (event) => {
+          console.log(`WebSocket fechado. Código: ${event.code}, Motivo: ${event.reason}`);
+          updateStatus('Conexão com o servidor perdida.');
+          document.getElementById('loadingOverlay').style.display = 'none';
+        };
+
+        ws.onmessage = async (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            console.log('Mensagem recebida do servidor:', data);
+
+            if (data.type === 'start') {
+              playerId = data.playerId;
+              console.log(`Iniciando jogo como jogador ${playerId}`);
+              updateStatus(`Jogador ${playerId} conectado. Iniciando jogo...`);
+              initPeerConnection();
+              if (playerId === 0) {
+                dataChannel = peerConnection.createDataChannel('game');
+                setupDataChannel();
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                console.log('Enviando oferta:', offer);
+                ws.send(JSON.stringify({ type: 'offer', sdp: offer }));
+              }
+            } else if (data.type === 'offer') {
+              console.log('Recebida oferta:', data.sdp);
+              await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+              const answer = await peerConnection.createAnswer();
+              await peerConnection.setLocalDescription(answer);
+              console.log('Enviando resposta:', answer);
+              ws.send(JSON.stringify({ type: 'answer', sdp: answer }));
+            } else if (data.type === 'answer') {
+              console.log('Recebida resposta:', data.sdp);
+              await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+            } else if (data.type === 'ice') {
+              console.log('Recebido candidato ICE:', data.candidate);
+              await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+            } else if (data.type === 'error') {
+              console.error('Erro do servidor:', data.message);
+              updateStatus(data.message);
+              document.getElementById('loadingOverlay').style.display = 'none';
+            }
+          } catch (error) {
+            console.error('Erro ao processar mensagem do servidor:', error);
+            updateStatus('Erro ao processar mensagem do servidor.');
+            document.getElementById('loadingOverlay').style.display = 'none';
+          }
+        };
+      };
+
+      function initPeerConnection() {
+        peerConnection = new RTCPeerConnection(rtcConfig);
+        peerConnection.onicecandidate = (event) => {
+          if (event.candidate) {
+            console.log('Candidato ICE gerado:', event.candidate);
+            ws.send(JSON.stringify({ type: 'ice', candidate: event.candidate }));
+          } else {
+            console.log('Todos os candidatos ICE foram gerados.');
+          }
+        };
+        
+        peerConnection.oniceconnectionstatechange = () => {
+          console.log('Estado ICE:', peerConnection.iceConnectionState);
+          updateStatus(`Estado da conexão: ${peerConnection.iceConnectionState}`);
+          if (peerConnection.iceConnectionState === 'failed') {
+            console.error('Conexão ICE falhou. Verifique servidores TURN ou configuração de rede.');
+            updateStatus('Falha na conexão P2P. Tente novamente ou verifique sua rede.');
+            document.getElementById('loadingOverlay').style.display = 'none';
+          } else if (peerConnection.iceConnectionState === 'disconnected') {
+            console.log('Conexão ICE desconectada. Tentando reconectar...');
+            updateStatus('Conexão P2P desconectada. Tentando reconectar...');
+          } else if (peerConnection.iceConnectionState === 'connected') {
+            console.log('Conexão ICE estabelecida com sucesso!');
+          }
+        };
+        
+        peerConnection.onicegatheringstatechange = () => {
+          console.log('Estado de coleta ICE:', peerConnection.iceGatheringState);
+        };
+        
+        peerConnection.ondatachannel = (event) => {
+          dataChannel = event.channel;
+          setupDataChannel();
+        };
+      }
+
+      function setupDataChannel() {
+        dataChannel.onopen = () => {
+          console.log('DataChannel aberto');
+          updateStatus('Conexão P2P estabelecida. Jogo iniciado!');
+          startGame();
+        };
+        
+        dataChannel.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            console.log('Mensagem recebida no DataChannel:', data);
+            
+            if (data.type === 'move') {
+              players[data.playerId] = data.position;
+            } else if (data.type === 'lap') {
+              laps[data.playerId] = data.lapCount;
+              positions[data.playerId] = data.position;
+              
+              // Verificar se alguém completou a corrida
+              if (data.lapCount >= 3 && !raceFinished) {
+                finishTimes[data.playerId] = Date.now() - startTime;
+                raceFinished = true;
+                
+                if (data.playerId !== playerId) {
+                  showEndGameScreen(`Jogador ${parseInt(data.playerId) + 1} venceu a corrida!`);
+                }
+              }
+            } else if (data.type === 'raceOver') {
+              showEndGameScreen(`Jogador ${parseInt(data.winnerId) + 1} venceu a corrida!`);
+            }
+          } catch (error) {
+            console.error('Erro ao processar mensagem do DataChannel:', error);
+          }
+        };
+        
+        dataChannel.onerror = (error) => {
+          console.error('Erro no DataChannel:', error);
+          updateStatus('Erro na conexão P2P.');
+          document.getElementById('loadingOverlay').style.display = 'none';
+        };
+        
+        dataChannel.onclose = () => {
+          console.log('DataChannel fechado');
+          updateStatus('Conexão P2P fechada.');
+          document.getElementById('loadingOverlay').style.display = 'none';
+        };
+      }
+
+      function startGame() {
+        players = {};
+        laps = { 0: 0, 1: 0 };
+        positions = { 0: 1, 1: 1 };
+        raceFinished = false;
+        startTime = Date.now();
+        finishTimes = {};
+        gameActive = true;
+        
+        // Inicializar jogadores
+        players[playerId] = {
+          x: playerId === 0 ? 100 : 700,
+          y: 300,
+          rotation: 0,
+          speed: 0,
+          maxSpeed: selectedCar === 'car1' ? 8 : selectedCar === 'car2' ? 6 : 10,
+          acceleration: selectedCar === 'car1' ? 0.2 : selectedCar === 'car2' ? 0.15 : 0.25,
+          handling: selectedCar === 'car1' ? 0.08 : selectedCar === 'car2' ? 0.06 : 0.1,
+          nitro: 100,
+          color: selectedCar === 'car1' ? '#FF0000' : selectedCar === 'car2' ? '#0080FF' : '#00FF00',
+          lap: 0,
+          lastCheckpoint: 0
+        };
+        
+        document.getElementById('controls').style.display = 'none';
+        endGameScreen.style.display = 'none';
+        document.getElementById('loadingOverlay').style.display = 'none';
+        console.log('Corrida iniciada');
+        gameLoop();
+      }
+
+      function restartGame() {
+        if (dataChannel?.readyState === 'open') {
+          dataChannel.send(JSON.stringify({ type: 'restart' }));
+          performGameRestart();
+        } else {
+          console.warn('DataChannel não está aberto. Reconectando...');
+          roomIdInput.value = currentRoomId;
+          joinRoom();
+        }
+      }
+
+      function performGameRestart() {
+        players = {};
+        laps = { 0: 0, 1: 0 };
+        positions = { 0: 1, 1: 1 };
+        raceFinished = false;
+        startTime = Date.now();
+        finishTimes = {};
+        gameActive = true;
+        
+        players[playerId] = {
+          x: playerId === 0 ? 100 : 700,
+          y: 300,
+          rotation: 0,
+          speed: 0,
+          maxSpeed: selectedCar === 'car1' ? 8 : selectedCar === 'car2' ? 6 : 10,
+          acceleration: selectedCar === 'car1' ? 0.2 : selectedCar === 'car2' ? 0.15 : 0.25,
+          handling: selectedCar === 'car1' ? 0.08 : selectedCar === 'car2' ? 0.06 : 0.1,
+          nitro: 100,
+          color: selectedCar === 'car1' ? '#FF0000' : selectedCar === 'car2' ? '#0080FF' : '#00FF00',
+          lap: 0,
+          lastCheckpoint: 0
+        };
+        
+        endGameScreen.style.display = 'none';
+        document.getElementById('loadingOverlay').style.display = 'none';
+        gameLoop();
+      }
+
+      document.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+      });
+      
+      document.addEventListener('keyup', (e) => {
+        keys[e.code] = false;
+      });
+
+      rematchBtn.addEventListener('click', () => {
+        restartGame();
+      });
+
+      exitBtn.addEventListener('click', () => {
+        closeConnections();
+        players = {};
+        gameActive = false;
+        document.getElementById('controls').style.display = 'block';
+        endGameScreen.style.display = 'none';
+        document.getElementById('carCustomization').style.display = 'block';
+        document.getElementById('trackSelection').style.display = 'none';
+        updateStatus('Jogo encerrado. Digite um ID de sala para jogar novamente.');
+      });
+
+      function gameLoop() {
+        if (!gameActive || !players[playerId]) return;
+
+        const player = players[playerId];
+        const now = Date.now();
+        
+        // Controles do carro
+        if (keys['ArrowUp'] || keys['KeyW']) {
+          player.speed += player.acceleration;
+          if (player.speed > player.maxSpeed) player.speed = player.maxSpeed;
+        }
+        
+        if (keys['ArrowDown'] || keys['KeyS']) {
+          player.speed -= player.acceleration * 0.7;
+          if (player.speed < -player.maxSpeed * 0.5) player.speed = -player.maxSpeed * 0.5;
+        }
+        
+        if (keys['ArrowLeft'] || keys['KeyA']) {
+          player.rotation -= player.handling * (player.speed > 0 ? 1 : -1);
+        }
+        
+        if (keys['ArrowRight'] || keys['KeyD']) {
+          player.rotation += player.handling * (player.speed > 0 ? 1 : -1);
+        }
+        
+        // Nitro
+        if ((keys['Space'] || keys['ShiftLeft']) && player.nitro > 0) {
+          player.speed *= 1.2;
+          player.nitro -= 0.5;
+        }
+        
+        // Atualizar posição
+        player.x += Math.cos(player.rotation) * player.speed;
+        player.y += Math.sin(player.rotation) * player.speed;
+        
+        // Atrito
+        player.speed *= 0.98;
+        if (Math.abs(player.speed) < 0.05) player.speed = 0;
+        
+        // Verificar limites da pista
+        if (player.x < 50) player.x = 50;
+        if (player.x > canvas.width - 50) player.x = canvas.width - 50;
+        if (player.y < 50) player.y = 50;
+        if (player.y > canvas.height - 50) player.y = canvas.height - 50;
+        
+        // Verificar checkpoint (simulado)
+        const checkpointX = playerId === 0 ? 700 : 100;
+        if (Math.abs(player.x - checkpointX) < 50 && Math.abs(player.y - 300) < 50) {
+          if (player.lastCheckpoint === 0) {
+            player.lap++;
+            player.lastCheckpoint = 1;
+            
+            // Atualizar contagem de voltas
+            laps[playerId] = player.lap;
+            
+            // Enviar atualização para o outro jogador
+            if (dataChannel?.readyState === 'open') {
+              dataChannel.send(JSON.stringify({ 
+                type: 'lap', 
+                playerId,
+                lapCount: player.lap,
+                position: positions[playerId]
+              }));
+            }
+            
+            // Verificar vitória
+            if (player.lap >= 3 && !raceFinished) {
+              finishTimes[playerId] = Date.now() - startTime;
+              raceFinished = true;
+              
+              // Recompensa em dinheiro
+              const reward = playerId === 0 ? 500 : 300;
+              playerMoney += reward;
+              updateMoneyDisplay();
+              saveGameData();
+              
+              // Notificar vitória
+              showEndGameScreen('Você venceu a corrida!');
+              
+              if (dataChannel?.readyState === 'open') {
+                dataChannel.send(JSON.stringify({ 
+                  type: 'raceOver', 
+                  winnerId: playerId
+                }));
+              }
+            }
+          }
+        } else if (Math.abs(player.x - 400) < 50 && Math.abs(player.y - 100) < 50) {
+          player.lastCheckpoint = 0;
+        }
+        
+        // Enviar posição periodicamente
+        if (now - lastMoveSent >= 50 && dataChannel?.readyState === 'open') {
+          dataChannel.send(JSON.stringify({ 
+            type: 'move', 
+            playerId, 
+            position: player 
+          }));
+          lastMoveSent = now;
+        }
+        
+        // Renderização
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Desenhar pista
+        drawTrack(ctx);
+        
+        // Desenhar jogadores
+        for (let id in players) {
+          if (players[id]) {
+            drawCar(ctx, players[id], id == playerId);
+          }
+        }
+        
+        // Desenhar HUD
+        drawHUD(ctx, player);
+        
+        requestAnimationFrame(gameLoop);
+      }
+
+      // Funções de desenho
+      function drawTrack(ctx) {
+        // Pista oval simples
+        ctx.fillStyle = '#2a2850';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.ellipse(canvas.width/2, canvas.height/2, 300, 200, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        ctx.strokeStyle = '#ffd700';
+        ctx.setLineDash([20, 15]);
+        ctx.beginPath();
+        ctx.ellipse(canvas.width/2, canvas.height/2, 280, 180, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // Linha de partida
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(canvas.width/2 - 5, canvas.height/2 - 100, 10, 40);
+      }
+
+      function drawCar(ctx, car, isPlayer) {
+        ctx.save();
+        ctx.translate(car.x, car.y);
+        ctx.rotate(car.rotation);
+        
+        // Corpo do carro
+        ctx.fillStyle = car.color;
+        ctx.fillRect(-20, -10, 40, 20);
+        
+        // Detalhes
+        ctx.fillStyle = '#333333';
+        ctx.fillRect(5, -8, 15, 16);
+        
+        // Rodas
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(-18, -12, 8, 5);
+        ctx.fillRect(-18, 7, 8, 5);
+        ctx.fillRect(10, -12, 8, 5);
+        ctx.fillRect(10, 7, 8, 5);
+        
+        // Seta indicando direção do jogador
+        if (isPlayer) {
+          ctx.fillStyle = '#ffff00';
+          ctx.beginPath();
+          ctx.moveTo(0, -20);
+          ctx.lineTo(-10, -30);
+          ctx.lineTo(10, -30);
+          ctx.closePath();
+          ctx.fill();
+        }
+        
+        ctx.restore();
+      }
+
+      function drawHUD(ctx, player) {
+        // Voltas
+        ctx.fillStyle = 'white';
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Volta: ${player.lap}/3`, 20, 30);
+        
+        // Nitro
+        ctx.fillStyle = '#00ffff';
+        ctx.fillRect(20, 40, player.nitro, 10);
+        ctx.strokeStyle = 'white';
+        ctx.strokeRect(20, 40, 100, 10);
+        
+        // Velocímetro
+        ctx.fillStyle = 'white';
+        ctx.fillText(`Velocidade: ${Math.abs(Math.round(player.speed * 10))} km/h`, 20, 80);
+        
+        // Posição
+        ctx.textAlign = 'right';
+        ctx.fillText(`Posição: ${positions[playerId] || 1}°`, canvas.width - 20, 30);
+      }
+    });
+
+    // Função para gerar ID aleatório de 5 caracteres
+    window.generateRandomId = function () {
+      const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let result = '';
+      for (let i = 0; i < 5; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+      }
+      document.getElementById('roomId').value = result;
+    };
+
+    // Função para copiar o ID gerado
+    document.getElementById('copyIdBtn').addEventListener('click', () => {
+      const roomIdInput = document.getElementById('roomId');
+      roomIdInput.select();
+      try {
+        document.execCommand('copy');
+        document.querySelector('#status').textContent = 'ID copiado com sucesso!';
+      } catch (err) {
+        console.error('Erro ao copiar ID:', err);
+        document.querySelector('#status').textContent = 'Erro ao copiar ID.';
+      }
+    });
+  </script>
+</body>
+</html>
