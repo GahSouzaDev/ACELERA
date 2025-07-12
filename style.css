@@ -1,0 +1,192 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: 'Press Start 2P', cursive, Arial, sans-serif;
+    background: #000;
+    color: #fff;
+    image-rendering: pixelated;
+}
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+#uiContainer {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 100;
+    background: rgba(0,0,0,0.7);
+    padding: 15px;
+    border-radius: 10px;
+    width: 300px;
+    border: 3px solid #ff0;
+}
+
+#loadingOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.9);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+    color: #ff0;
+    flex-direction: column;
+    font-family: 'Press Start 2P', cursive;
+}
+
+#endGameScreen {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #000;
+    padding: 30px;
+    border: 4px solid #ff0;
+    text-align: center;
+    color: #fff;
+    z-index: 300;
+    display: none;
+    width: 80%;
+    max-width: 500px;
+    font-family: 'Press Start 2P', cursive;
+}
+
+#gameInfo {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(0,0,0,0.7);
+    padding: 15px;
+    border-radius: 10px;
+    z-index: 100;
+    border: 2px solid #f0f;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 10px;
+}
+
+.loader {
+    border: 8px solid #f3f3f3;
+    border-top: 8px solid #ff0;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+button, input {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 10px;
+}
+
+button {
+    background: #f00;
+    color: #ff0;
+    border: none;
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
+    letter-spacing: 1px;
+}
+
+button:hover {
+    background: #d00;
+}
+
+input[type="text"] {
+    padding: 10px;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+    background: #333;
+    color: #ff0;
+    border: 2px solid #ff0;
+}
+
+#customizationScreen {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #000;
+    padding: 20px;
+    border: 4px solid #ff0;
+    z-index: 400;
+    display: none;
+    width: 80%;
+    max-width: 600px;
+    color: #fff;
+    font-family: 'Press Start 2P', cursive;
+}
+
+.car-option {
+    display: inline-block;
+    margin: 10px;
+    cursor: pointer;
+    text-align: center;
+}
+
+.car-option img {
+    width: 100px;
+    height: 60px;
+    border: 2px solid #333;
+}
+
+.car-option.selected img {
+    border-color: #ff0;
+}
+
+.color-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.color-option {
+    width: 30px;
+    height: 30px;
+    border: 2px solid #333;
+    cursor: pointer;
+}
+
+.color-option.selected {
+    border-color: #ff0;
+}
+
+.upgrade-bar {
+    margin: 10px 0;
+}
+
+.upgrade-bar label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.upgrade-bar input {
+    width: 100%;
+}
+
+#carPreview {
+    width: 200px;
+    height: 120px;
+    margin: 0 auto;
+    background: #333;
+    position: relative;
+}
+
+.smoke-particle {
+    position: absolute;
+    background: #fff;
+    border-radius: 50%;
+    opacity: 0.6;
+}
