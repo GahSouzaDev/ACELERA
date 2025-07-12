@@ -916,10 +916,7 @@
                     player.speed += player.acceleration;
                     if (player.speed > player.maxSpeed) player.speed = player.maxSpeed;
                     
-                    // Criar fumaça ao acelerar
-                    if (Math.random() < 0.3) {
-                        createSmoke(player.x, player.z, player.rotation);
-                    }
+                  
                 }
                 
                 if (keys['ArrowDown'] || keys['KeyS']) {
@@ -940,10 +937,7 @@
                     player.nitro -= 0.8;
                     document.getElementById('nitroAmount').textContent = `${Math.round(player.nitro)}%`;
                     
-                    // Fumaça mais intensa ao usar nitro
-                    if (Math.random() < 0.5) {
-                        createSmoke(player.x, player.z, player.rotation);
-                    }
+                    
                 }
                 
                 // Atualizar posição
