@@ -538,11 +538,11 @@
         const gearSettings = {
             'R': { minSpeed: -20, maxSpeed: 0, optimalMin: -14, optimalMax: -7, torqueMultiplier: 0.7 },
             'N': { minSpeed: -10, maxSpeed: 10, optimalMin: 0, optimalMax: 0, torqueMultiplier: 0.1 },            
-            '1': { minSpeed: 0, maxSpeed: 20, optimalMin: 7, optimalMax: 14, torqueMultiplier: 1.0 },
-            '2': { minSpeed: 0, maxSpeed: 40, optimalMin: 20, optimalMax: 30, torqueMultiplier: 1.9 },
-            '3': { minSpeed: 0, maxSpeed: 60, optimalMin: 30, optimalMax: 45, torqueMultiplier: 2.8 },
-            '4': { minSpeed: 0, maxSpeed: 80, optimalMin: 40, optimalMax: 60, torqueMultiplier: 3.7 },
-            '5': { minSpeed: 0, maxSpeed: 120, optimalMin: 55, optimalMax: 100, torqueMultiplier: 4.6 }
+            '1': { minSpeed: 0, maxSpeed: 20, optimalMin: 17, optimalMax: 20, torqueMultiplier: 1.0 },
+            '2': { minSpeed: 0, maxSpeed: 40, optimalMin: 30, optimalMax: 38, torqueMultiplier: 0.9 },
+            '3': { minSpeed: 0, maxSpeed: 60, optimalMin: 48, optimalMax: 57, torqueMultiplier: 0.8 },
+            '4': { minSpeed: 0, maxSpeed: 80, optimalMin: 65, optimalMax: 75, torqueMultiplier: 0.7 },
+            '5': { minSpeed: 0, maxSpeed: 120, optimalMin: 80, optimalMax: 110, torqueMultiplier: 0.6 }
         };
 
         // Configuração WebRTC
@@ -1128,7 +1128,7 @@
             const speed = Math.abs(gameConfig.speed);
 
             // Calcular torque baseado na velocidade e faixa ideal
-            let torqueEfficiency = 0.1;
+            let torqueEfficiency = 10.1;
             if (gameConfig.gear === 'N') {
                 torqueEfficiency = gear.torqueMultiplier;
             } else if (gameConfig.gear === 'R') {
@@ -1175,7 +1175,7 @@
             }
 
             // Aplicar arrasto
-            gameConfig.speed *= 0.98;
+            gameConfig.speed *= 0.999;
 
             // Atualizar torque para exibição
             gameConfig.torque = Math.round(torqueEfficiency * 100);
