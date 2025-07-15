@@ -541,7 +541,8 @@
             '1': { minSpeed: 0, maxSpeed: 20, optimalMin: 7, optimalMax: 14, torqueMultiplier: 1.0 },
             '2': { minSpeed: 0, maxSpeed: 40, optimalMin: 20, optimalMax: 30, torqueMultiplier: 1.9 },
             '3': { minSpeed: 0, maxSpeed: 60, optimalMin: 30, optimalMax: 45, torqueMultiplier: 2.8 },
-            '4': { minSpeed: 0, maxSpeed: 80, optimalMin: 40, optimalMax: 60, torqueMultiplier: 3.7 }
+            '4': { minSpeed: 0, maxSpeed: 80, optimalMin: 40, optimalMax: 60, torqueMultiplier: 3.7 },
+            '5': { minSpeed: 0, maxSpeed: 120, optimalMin: 55, optimalMax: 100, torqueMultiplier: 4.6 }
         };
 
         // Configuração WebRTC
@@ -1334,7 +1335,7 @@
 
         // Trocar marcha para cima
         function shiftGearUp() {
-            const gears = ['N', 'R', '1', '2', '3', '4'];
+            const gears = ['R', 'N', '1', '2', '3', '4', '5'];
             const currentIndex = gears.indexOf(gameConfig.gear);
             if (currentIndex < gears.length - 1) {
                 gameConfig.gear = gears[currentIndex + 1];
@@ -1343,7 +1344,7 @@
 
         // Trocar marcha para baixo
         function shiftGearDown() {
-            const gears = ['N', 'R', '1', '2', '3', '4'];
+            const gears = ['R', 'N', '1', '2', '3', '4', '5'];
             const currentIndex = gears.indexOf(gameConfig.gear);
             if (currentIndex > 0) {
                 gameConfig.gear = gears[currentIndex - 1];
