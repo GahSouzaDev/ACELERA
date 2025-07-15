@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Corrida Arcade Multiplayer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+
+        body {
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            height: 100vh;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+        }
+
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 10;
+            transition: opacity 0.5s;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #00ffea;
+            color: #00ffea;
+            letter-spacing: 3px;
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 30px;
+            color: #ffcc00;
+        }
+
+        button {
+            background: #ff3366;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            font-size: 1.2rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(255, 51, 102, 0.7);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #ff0066;
+            transform: scale(1.05);
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .option {
+            background: rgba(30, 30, 60, 0.8);
+            padding: 15px;
+            margin: 10px;
+            border-radius: 10px;
+            width: 300px;
+            text-align: center;
+            border: 2px solid #00ffea;
+        }
+
+        .option h3 {
+            color: #ffcc00;
+            margin-bottom: 10px;
+        }
+
+        .option p {
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #00ffea;
+            z-index: 5;
+        }
+
+        .stats div {
+            margin: 5px 0;
+        }
+
+        #speedDisplay {
+            font-size: 1.8rem;
+            color: #ffcc00;
+        }
+
+        #gearDisplay {
+            font-size: 1.5rem;
+            color: #ff3366;
+        }
+
+        #status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #00ffea;
+            z-index: 5;
+            font-size: 1.2rem;
+            color: #00ffea;
+        }
+
+        .torque-bar {
+            width: 250px;
+            height: 30px;
+            background: #333;
+            border: 2px solid #00ffea;
+            border-radius: 15px;
+            margin-top: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .torque-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #ffcc00, #00ff00);
+            width: 0%;
+            transition: width 0.1s;
+        }
+
+        .torque-optimal {
+            position: absolute;
+            height: 100%;
+            width: 4px;
+            background: #00ffea;
+            left: 70%;
+        }
+
+        #mobileControls {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 5;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .control-btn {
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px;
+            color: white;
+            font-size: 1.5rem;
+            border: 2px solid #00ffea;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        .control-btn:active {
+            background: rgba(0, 255, 234, 0.3);
+        }
+
+        .gear-controls {
+            flex-direction: row;
+        }
+
+        .gear-btn {
+            width: 60px;
+            height: 60px;
+            margin: 5px;
+            background: rgba(255, 51, 102, 0.7);
+        }
+
+        .gear-display {
+            background: rgba(30, 30, 60, 0.8);
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ffcc00;
+            border: 2px solid #00ffea;
+            margin-top: 10px;
+        }
+
+        #dPad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .dpad-btn {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255,  ascended;
+            border: 2px solid #00ffea;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .dpad-btn:nth-child(1) {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        .dpad-btn:nth-child(2) {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .dpad-btn:nth-child(3) {
+            grid-column: 2;
+            grid-row: 2;
+        }
+
+        .dpad-btn:nth-child(4) {
+            grid-column: 3;
+            grid-row: 2;
+        }
+
+        .dpad-btn:nth-child(5) {
+            grid-column: 2;
+            grid-row: 3;
+        }
+
+        .smoke-particle {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        #instructions {
+            max-width: 600px;
+            text-align: center;
+            margin: 20px;
+            line-height: 1.6;
+        }
+
+        #instructions p {
+            margin: 10px 0;
+            color: #aaa;
+        }
+
+        .highlight {
+            color: #ffcc00;
+            font-weight: bold;
+        }
+
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        #roomInput, #nameInput {
+            padding: 10px;
+            margin: 10px;
+            font-size: 1rem;
+            border-radius: 5px;
+            border: 2px solid #00ffea;
+            background: rgba(30, 30, 60, 0.8);
+            color: white;
+        }
+
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            color: white;
+            flex-direction: column;
+        }
+
+        .loader {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #3498db;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #endGameScreen, #countdownScreen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            color: white;
+            z-index: 300;
+            display: none;
+            width: 80%;
+            max-width: 500px;
+        }
+
+        #countdownDisplay {
+            font-size: 4rem;
+            color: #ff3366;
+            text-shadow: 0 0 10px #ff3366;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+            h2 {
+                font-size: 1.5rem;
+            }
+            .stats, #status {
+                font-size: 0.9rem;
+                padding: 10px;
+            }
+            #speedDisplay {
+                font-size: 1.4rem;
+            }
+            .control-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 1.2rem;
+            }
+            #countdownDisplay {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="startScreen" class="screen">
+            <h1>CORRIDA ARCADE</h1>
+            <h2>MULTIPLAYER 3D</h2>
+            <div id="instructions">
+                <p>Controles <span class="highlight">DESKTOP</span>: Direção WASD ou Setas | Acelerar: Espaço | Marchas: W/S</p>
+                <p>Controles <span class="highlight">MOBILE</span>: Use os controles na parte inferior da tela</p>
+                <p>Objetivo: Complete 3 voltas na pista antes do seu oponente!</p>
+            </div>
+            <input type="text" id="nameInput" placeholder="Digite seu nome">
+            <input type="text" id="roomInput" placeholder="Digite o ID da sala ou clique em Gerar ID">
+            <div>
+                <button id="generateIdButton" class="pulse">GERAR ID</button>
+                <button id="copyIdButton" class="pulse">COPIAR ID</button>
+            </div>
+            <button id="startButton" class="pulse">INICIAR CORRIDA</button>
+            <button id="offlineButton" class="pulse">JOGAR OFFLINE</button>
+        </div>
+
+        <div id="selectionScreen" class="screen hidden">
+            <h1>SELEÇÃO E UPGRADES</h1>
+            <h2 id="timeDisplay">Tempo restante: 30s</h2>
+            <div class="option">
+                <h3>ESCOLHER CARRO</h3>
+                <select id="carSelect">
+                    <option value="0">Carro 1</option>
+                    <option value="1">Carro 2</option>
+                </select>
+                <h3>COR DO CARRO</h3>
+                <select id="colorSelect">
+                    <option value="0x3366ff">Azul</option>
+                    <option value="0xff3366">Vermelho</option>
+                    <option value="0x00ff00">Verde</option>
+                </select>
+            </div>
+            <div class="option">
+                <h3>ESCOLHER PISTA</h3>
+                <select id="trackSelect">
+                    <option value="hockenheimring">Hockenheimring</option>
+                    <option value="nurburgring">Nürburgring</option>
+                </select>
+            </div>
+            <div class="option">
+                <h3>MOTOR TURBO</h3>
+                <p>Aumenta o torque máximo em 20%</p>
+                <p>Custo: $100</p>
+                <button class="buy-button" data-upgrade="torque">COMPRAR</button>
+            </div>
+            <div class="option">
+                <h3>AERODINÂMICA</h3>
+                <p>Aumenta a velocidade máxima em 15%</p>
+                <p>Custo: $150</p>
+                <button class="buy-button" data-upgrade="speed">COMPRAR</button>
+            </div>
+            <div class="option">
+                <h3>TRANSMISSÃO ESPORTIVA</h3>
+                <p>Amplia a faixa útil de cada marcha</p>
+                <p>Custo: $200</p>
+                <button class="buy-button" data-upgrade="gears">COMPRAR</button>
+            </div>
+            <h2 id="moneyDisplay">Dinheiro: $300</h2>
+            <button id="confirmSelectionButton" disabled>CONFIRMAR</button>
+        </div>
+
+        <div id="countdownScreen" class="screen hidden">
+            <h1 id="countdownDisplay"></h1>
+        </div>
+
+        <div id="gameScreen" class="screen hidden">
+            <canvas id="gameCanvas"></canvas>
+            <div class="stats">
+                <div>VELOCIDADE: <span id="speedDisplay">0</span> km/h</div>
+                <div>MARCHA: <span id="gearDisplay">N</span></div>
+                <div>TORQUE:</div>
+                <div class="torque-bar">
+                    <div class="torque-fill"></div>
+                    <div class="torque-optimal"></div>
+                </div>
+                <div id="lapCounter">VOLTA: 0/3</div>
+                <div id="positionDisplay">POSIÇÃO: 1°</div>
+            </div>
+            <div id="status">Pronto para conectar...</div>
+            <div id="mobileControls">
+                <div class="control-group">
+                    <div class="control-btn" id="accelerateBtn">A</div>
+                    <div class="control-btn" id="brakeBtn">F</div>
+                </div>
+                <div class="control-group">
+                    <div id="dPad">
+                        <div class="dpad-btn">↑</div>
+                        <div class="dpad-btn">←</div>
+                        <div class="dpad-btn">↓</div>
+                        <div class="dpad-btn">→</div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="gear-controls">
+                        <div class="control-btn gear-btn" id="gearUpBtn">+</div>
+                        <div class="control-btn gear-btn" id="gearDownBtn">-</div>
+                    </div>
+                    <div class="gear-display" id="mobileGearDisplay">N</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loadingOverlay" style="display: none;">
+            <div class="loader"></div>
+            <div id="loadingText">Conectando...</div>
+        </div>
+
+        <div id="endGameScreen">
+            <h2 id="endGameMessage"></h2>
+            <div id="raceResults"></div>
+            <button id="rematchBtn">PRÓXIMA CORRIDA</button>
+            <button id="exitBtn">SAIR</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
