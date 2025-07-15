@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Corrida Arcade Multiplayer PRO</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', monospace; }
+        body { overflow: hidden; background: #1a1a2e; color: #fff; height: 100vh; }
+        #gameContainer { position: relative; width: 100%; height: 100vh; }
+        #gameCanvas { display: block; }
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0, 0, 0, 0.85); z-index: 10; transition: opacity 0.5s; text-align: center; }
+        .hidden { opacity: 0; pointer-events: none; }
+        h1 { font-size: 3.5rem; margin-bottom: 20px; text-shadow: 0 0 15px #00ffea; color: #00ffea; letter-spacing: 3px; }
+        h2 { font-size: 2rem; margin-bottom: 30px; color: #ffcc00; }
+        button { background: #ff3366; color: white; border: none; padding: 15px 30px; margin: 10px; font-size: 1.2rem; border-radius: 30px; cursor: pointer; transition: all 0.3s; box-shadow: 0 0 15px rgba(255, 51, 102, 0.7); text-transform: uppercase; letter-spacing: 1px; font-weight: bold; }
+        button:hover { background: #ff0066; transform: scale(1.05); }
+        .stats { position: absolute; top: 20px; left: 20px; background: rgba(0, 0, 0, 0.7); padding: 15px; border-radius: 10px; border: 2px solid #00ffea; z-index: 5; }
+        .stats div { margin: 8px 0; font-size: 1.1rem; }
+        #speedDisplay { font-size: 2rem; color: #ffcc00; font-weight: bold; }
+        #gearDisplay { font-size: 1.8rem; color: #ff3366; font-weight: bold; }
+        #lapCounter, #opponentLapCounter { font-size: 1.2rem; }
+        #status, #countdown { position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.7); padding: 15px; border-radius: 10px; border: 2px solid #00ffea; z-index: 5; font-size: 1.2rem; color: #00ffea; }
+        #countdown { top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 8rem; padding: 30px 50px; text-shadow: 0 0 20px #ffcc00; color: #ffcc00; }
+        .torque-bar-container { position: relative; width: 250px; height: 30px; background: #222; border: 2px solid #00ffea; border-radius: 15px; margin-top: 10px; overflow: hidden; }
+        .torque-fill { height: 100%; background: linear-gradient(90deg, #ff0000, #ffcc00, #00ff00); width: 0%; transition: width 0.1s; }
+        .torque-optimal-zone { position: absolute; top: 0; height: 100%; width: 25%; background: rgba(0, 255, 234, 0.2); }
+        .nitro-bar-container { width: 250px; height: 20px; background: #222; border: 2px solid #ff3366; border-radius: 10px; margin-top: 10px; overflow: hidden; }
+        .nitro-fill { height: 100%; background: #ff3366; width: 0%; transition: width 0.2s; }
+        #mobileControls { display: none; } /* Mobile controls hidden by default, shown via JS if needed */
+        
+        @media (max-width: 768px) { /* Basic responsive for smaller screens */
+             h1 { font-size: 2.5rem; } h2 { font-size: 1.5rem; }
+            .stats, #status { font-size: 0.9rem; padding: 10px; } #speedDisplay { font-size: 1.4rem; }
+            #mobileControls { position: absolute; bottom: 10px; width: 100%; display: flex; justify-content: space-around; z-index: 6; }
+            .control-group { display: flex; align-items: center; }
+            .control-btn { width: 60px; height: 60px; background: rgba(255, 255, 255, 0.2); border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 5px; color: white; font-size: 1.5rem; border: 2px solid #00ffea; user-select: none; touch-action: manipulation; }
+            .control-btn:active { background: rgba(0, 255, 234, 0.5); }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="startScreen" class="screen">
+            <h1>CORRIDA ARCADE PRO</h1>
+            <h2>DRIFT & NITRO</h2>
+            <p>Desktop: Setas/Espaço/Nitro(N)/Marcha(W,S)</p>
+            <p>Mobile: Controles na tela</p>
+            <button id="startButton">INICIAR CORRIDA</button>
+        </div>
+
+        <div id="endScreen" class="screen hidden">
+            <h1 id="endTitle">FIM DE JOGO</h1>
+            <h2 id="endMessage">Você venceu!</h2>
+            <button id="restartButton">JOGAR NOVAMENTE</button>
+        </div>
+        
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="hud" class="hidden">
+            <div class="stats">
+                <div>VELOCIDADE: <span id="speedDisplay">0</span> km/h</div>
+                <div>MARCHA: <span id="gearDisplay">N</span></div>
+                <div>TORQUE:</div>
+                <div class="torque-bar-container">
+                    <div class="torque-optimal-zone"></div>
+                    <div class="torque-fill"></div>
+                </div>
+                 <div>NITRO:</div>
+                <div class="nitro-bar-container">
+                    <div class="nitro-fill"></div>
+                </div>
+                <div id="lapCounter">SUA VOLTA: 0 / 3</div>
+                <div id="opponentLapCounter">OPONENTE: 0 / 3</div>
+            </div>
+            <div id="status">Conectando...</div>
+            <div id="countdown" class="hidden">3</div>
+        </div>
+
+        <div id="mobileControls">
+             <div class="control-group">
+                <div class="control-btn" id="steerLeftBtn">←</div>
+                <div class="control-btn" id="steerRightBtn">→</div>
+            </div>
+            <div class="control-group">
+                 <div class="control-btn" id="nitroBtn">N</div>
+                <div class="control-btn" id="accelerateBtn">GAS</div>
+            </div>
+             <div class="control-group">
+                <div class="control-btn" id="gearUpBtn">▲</div>
+                <div class="control-btn" id="gearDownBtn">▼</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- ELEMENTOS DO DOM ---
+        const startScreen = document.getElementById('startScreen');
+        const endScreen = document.getElementById('endScreen');
+        const startButton = document.getElementById('startButton');
+        const restartButton = document.getElementById('restartButton');
+        const hud = document.getElementById('hud');
+        const statusDisplay = document.getElementById('status');
+        const speedDisplay = document.getElementById('speedDisplay');
+        const gearDisplay = document.getElementById('gearDisplay');
+        const torqueFill = document.querySelector('.torque-fill');
+        const torqueOptimalZone = document.querySelector('.torque-optimal-zone');
+        const nitroFill = document.querySelector('.nitro-fill');
+        const lapCounter = document.getElementById('lapCounter');
+        const opponentLapCounter = document.getElementById('opponentLapCounter');
+        const countdownDisplay = document.getElementById('countdown');
+
+        // --- VARIÁVEIS GLOBAIS ---
+        let scene, camera, renderer;
+        let localCar, remoteCar;
+        let clock = new THREE.Clock();
+        let audio;
+        let raceState = 'waiting'; // waiting, countdown, racing, finished
+
+        // --- CONFIGURAÇÕES DO JOGO ---
+        const keys = {};
+        const TOTAL_LAPS = 3;
+        const player = {
+            id: null,
+            car: null,
+            speed: 0,
+            gear: 0, // -1:R, 0:N, 1-6:Gears
+            rpm: 0,
+            steering: 0,
+            acceleration: 0,
+            nitro: 0,
+            isDrifting: false,
+            lap: 0,
+            justPassedFinishLine: false,
+        };
+        const opponent = { lap: 0 };
+        const GEARS = [
+            /* R */ { ratio: -2.5, optimalRpm: 3000, maxRpm: 5000 },
+            /* N */ { ratio: 0, optimalRpm: 0, maxRpm: 0 },
+            /* 1 */ { ratio: 3.5, optimalRpm: 4500, maxRpm: 7000 },
+            /* 2 */ { ratio: 2.1, optimalRpm: 5000, maxRpm: 7500 },
+            /* 3 */ { ratio: 1.4, optimalRpm: 5500, maxRpm: 8000 },
+            /* 4 */ { ratio: 1.0, optimalRpm: 6000, maxRpm: 8500 },
+            /* 5 */ { ratio: 0.8, optimalRpm: 6500, maxRpm: 9000 },
+        ];
+        const TORQUE_CURVE = [0, 0.6, 0.8, 1, 0.9, 0.7, 0.5, 0.3]; // Força em diferentes faixas de RPM
+
+        // --- INICIALIZAÇÃO ---
+        function init() {
+            setupScene();
+            setupAudio();
+            setupControls();
+            
+            localCar = createCar(0x3366ff, new THREE.Vector3(55, 0.5, 5)); // Azul
+            remoteCar = createCar(0xff3366, new THREE.Vector3(55, 0.5, -5)); // Vermelho
+            player.car = localCar;
+
+            animate();
+            // connectToServer(); // Descomente para multiplayer
+            statusDisplay.textContent = "Modo Treino. Aperte 'Iniciar'."; // Placeholder
+        }
+
+        // --- LÓGICA DE JOGO ---
+        function startGame() {
+            startScreen.classList.add('hidden');
+            hud.classList.remove('hidden');
+            resetPlayerState();
+            
+            raceState = 'countdown';
+            let count = 3;
+            countdownDisplay.textContent = count;
+            countdownDisplay.classList.remove('hidden');
+            audio.play('countdown');
+
+            const countdownInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countdownDisplay.textContent = count;
+                    audio.play('countdown');
+                } else {
+                    countdownDisplay.textContent = "JÁ!";
+                    audio.play('startRace');
+                    raceState = 'racing';
+                    setTimeout(() => countdownDisplay.classList.add('hidden'), 1000);
+                    clearInterval(countdownInterval);
+                }
+            }, 1000);
+        }
+        
+        function resetPlayerState() {
+            player.speed = 0;
+            player.gear = 0;
+            player.rpm = 0;
+            player.nitro = 0;
+            player.lap = 0;
+            player.justPassedFinishLine = true; // para contar a primeira volta
+            player.car.position.set(55, 0.5, 5);
+            player.car.rotation.y = -Math.PI / 2;
+            opponent.lap = 0;
+            updateHUD();
+        }
+
+        function endGame(playerWon) {
+            raceState = 'finished';
+            endScreen.classList.remove('hidden');
+            document.getElementById('endTitle').textContent = playerWon ? "VOCÊ VENCEU! 🏆" : "VOCÊ PERDEU! 😢";
+            document.getElementById('endMessage').textContent = `Completou ${player.lap} de ${TOTAL_LAPS} voltas.`;
+             audio.stop('engine');
+             audio.stop('drift');
+        }
+
+        function updatePhysics(dt) {
+            if (raceState !== 'racing') {
+                 player.speed *= 0.95; // Freia o carro se a corrida não começou/terminou
+                 updateCarVisuals(dt);
+                 return;
+            }
+
+            const currentGear = GEARS[player.gear + 1]; // +1 para ajustar o índice (R=-1, N=0, 1=1...)
+            const maxRpm = currentGear.maxRpm;
+
+            // --- Calcular RPM ---
+            if (currentGear.ratio !== 0) {
+                player.rpm = Math.abs(player.speed) * currentGear.ratio * 50;
+            } else {
+                // RPM no neutro, sobe com aceleração e cai lentamente
+                player.rpm += (player.acceleration > 0 ? 4000 * dt : -2000 * dt);
+                player.rpm = Math.max(800, Math.min(player.rpm, 8000));
+            }
+            player.rpm = Math.min(player.rpm, maxRpm * 1.1);
+
+            // --- Calcular Força do Motor (Torque) ---
+            let engineForce = 0;
+            if (player.acceleration > 0 && currentGear.ratio !== 0 && player.rpm < maxRpm) {
+                let rpmFraction = player.rpm / maxRpm;
+                let curveIndex = Math.floor(rpmFraction * (TORQUE_CURVE.length - 1));
+                engineForce = TORQUE_CURVE[curveIndex] * 150 * currentGear.ratio * player.acceleration;
+            }
+
+            // --- Nitro ---
+            if (keys['n'] && player.nitro > 0.1) {
+                engineForce *= 2.5;
+                player.nitro -= dt * 0.5;
+                if(!audio.isPlaying('nitro')) audio.play('nitro');
+            } else {
+                 if(audio.isPlaying('nitro')) audio.stop('nitro');
+            }
+            // Regenerar nitro
+            player.nitro += (player.isDrifting ? 0.2 * dt : 0.05 * dt);
+            player.nitro = Math.min(player.nitro, 1);
+            
+            // --- Resistências ---
+            let friction = player.speed * 2; // Atrito
+            let airDrag = player.speed * player.speed * 0.01; // Arrasto do ar
+            let totalResistance = friction + airDrag;
+            
+            // --- Aceleração Final e Velocidade ---
+            let finalForce = engineForce - totalResistance;
+            player.speed += finalForce * dt;
+            player.speed = Math.max(-50, player.speed); // Limitar velocidade de ré
+
+            // --- Direção e Drift ---
+            player.steering = 0;
+            if (keys['ArrowLeft']) player.steering = 1;
+            if (keys['ArrowRight']) player.steering = -1;
+            
+            let steerStrength = Math.PI * 1.2; // Força da virada
+            if (player.speed !== 0) {
+                // Inverter direção ao dar ré
+                let turnDirection = player.speed > 0 ? 1 : -1;
+                player.car.rotation.y += player.steering * steerStrength * dt * turnDirection * (1 - Math.abs(player.speed) / 300);
+            }
+            
+            // Lógica de Drift
+            const isTryingToDrift = Math.abs(player.steering) > 0 && Math.abs(player.speed) > 50;
+            if(isTryingToDrift && !player.isDrifting) {
+                player.isDrifting = true;
+                if(!audio.isPlaying('drift')) audio.play('drift');
+            } else if (!isTryingToDrift && player.isDrifting) {
+                player.isDrifting = false;
+                 if(audio.isPlaying('drift')) audio.stop('drift');
+            }
+            
+            // --- Atualizar Posição ---
+            let driftAngle = player.isDrifting ? player.steering * 0.4 : 0; // Desliza um pouco para o lado
+            player.car.position.x += Math.sin(player.car.rotation.y + driftAngle) * player.speed * dt;
+            player.car.position.z += Math.cos(player.car.rotation.y + driftAngle) * player.speed * dt;
+
+            updateCarVisuals(dt);
+            checkCollisions();
+            checkLaps();
+        }
+
+        function updateCarVisuals(dt) {
+             // Animar rodas
+            const wheelRotation = player.speed * dt * 0.1;
+            player.car.userData.wheels.forEach((wheel, i) => {
+                wheel.rotation.x -= wheelRotation;
+                // Virar rodas dianteiras
+                if (i < 2) {
+                    wheel.rotation.y = player.steering * 0.5;
+                }
+            });
+
+            // Animar fumaça/drift
+            if ((player.isDrifting || (Math.abs(player.acceleration) > 0 && player.rpm > 5000)) && Math.random() > 0.3) {
+                createSmoke(player.car);
+            }
+        }
+        
+        function checkCollisions() {
+            const pos = player.car.position;
+            const distFromCenter = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
+            const innerRadius = 40;
+            const outerRadius = 70;
+
+            if (distFromCenter < innerRadius || distFromCenter > outerRadius) {
+                player.speed *= 0.8; // Perde muita velocidade
+                // Empurra o carro de volta para a pista
+                let angle = Math.atan2(pos.x, pos.z);
+                let targetRadius = (innerRadius + outerRadius) / 2;
+                pos.x = Math.sin(angle) * targetRadius;
+                pos.z = Math.cos(angle) * targetRadius;
+                
+                // Shake camera
+                camera.position.x += (Math.random() - 0.5) * 2;
+                camera.position.y += (Math.random() - 0.5) * 2;
+                audio.play('collision');
+            }
+        }
+        
+        function checkLaps() {
+            const pos = player.car.position;
+            // Linha de chegada está em z > 0, x ~= 55
+            const onFinishLine = pos.x > 50 && pos.z > -10 && pos.z < 10;
+            
+            if (onFinishLine && !player.justPassedFinishLine) {
+                player.lap++;
+                player.justPassedFinishLine = true;
+                if (player.lap >= TOTAL_LAPS) {
+                    endGame(true);
+                }
+            } else if (!onFinishLine) {
+                 player.justPassedFinishLine = false;
+            }
+        }
+        
+        function updateHUD() {
+            speedDisplay.textContent = Math.round(Math.abs(player.speed));
+            const gearName = ['R', 'N', '1', '2', '3', '4', '5'][player.gear + 1];
+            gearDisplay.textContent = gearName;
+
+            const currentGear = GEARS[player.gear + 1];
+            let rpmPercent = (currentGear.maxRpm > 0) ? (player.rpm / currentGear.maxRpm) * 100 : 0;
+            torqueFill.style.width = `${Math.min(100, rpmPercent)}%`;
+
+            let optimalZoneStart = (currentGear.optimalRpm / currentGear.maxRpm) * 100 - 12.5;
+            torqueOptimalZone.style.left = `${optimalZoneStart}%`;
+            
+            nitroFill.style.width = `${player.nitro * 100}%`;
+            lapCounter.textContent = `SUA VOLTA: ${player.lap} / ${TOTAL_LAPS}`;
+            opponentLapCounter.textContent = `OPONENTE: ${opponent.lap} / ${TOTAL_LAPS}`;
+        }
+        
+        function shiftGear(direction) {
+            if (raceState !== 'racing') return;
+            const oldGear = player.gear;
+            player.gear += direction;
+            player.gear = Math.max(-1, Math.min(player.gear, GEARS.length - 2)); // Limita entre R e a última marcha
+            
+            if (oldGear !== player.gear) {
+                const currentGear = GEARS[player.gear + 1];
+                const perfectShift = player.rpm > currentGear.optimalRpm * 0.9 && player.rpm < currentGear.optimalRpm * 1.1;
+                
+                if (perfectShift) {
+                    player.speed *= 1.05; // Pequeno boost
+                    player.nitro = Math.min(1, player.nitro + 0.1); // Ganha nitro
+                    hud.style.animation = 'flash 0.2s';
+                    setTimeout(() => hud.style.animation = '', 200);
+                    audio.play('shiftPerfect');
+                } else {
+                    audio.play('shift');
+                }
+            }
+        }
+
+        // --- LOOP DE ANIMAÇÃO ---
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = clock.getDelta();
+            
+            // --- Atualizar física e HUD ---
+            updatePhysics(dt);
+            updateHUD();
+
+            // --- Atualizar câmera ---
+            if (player.car) {
+                const offset = new THREE.Vector3(0, 8, -15);
+                const rotatedOffset = offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), player.car.rotation.y);
+                const targetCamPos = player.car.position.clone().add(rotatedOffset);
+                camera.position.lerp(targetCamPos, dt * 5);
+                camera.lookAt(player.car.position.clone().add(new THREE.Vector3(0, 2, 0)));
+            }
+            
+            // Animar fumaça
+            for (let i = smokeParticles.length - 1; i >= 0; i--) {
+                const p = smokeParticles[i];
+                p.scale.multiplyScalar(1 - dt * 0.8);
+                p.material.opacity = p.scale.x;
+                if (p.scale.x < 0.1) {
+                    scene.remove(p);
+                    smokeParticles.splice(i, 1);
+                }
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        // --- SETUP THREE.JS ---
+        function setupScene() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1d2951);
+            scene.fog = new THREE.Fog(scene.background, 100, 300);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas'), antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(50, 50, 20);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            scene.add(dirLight);
+
+            createTrack();
+        }
+        
+        function createTrack() {
+            const trackGroup = new THREE.Group();
+            const trackMaterial = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.8 });
+            const trackShape = new THREE.Shape();
+            trackShape.absarc(0, 0, 70, 0, Math.PI * 2, false);
+            const holePath = new THREE.Path();
+            holePath.absarc(0, 0, 40, 0, Math.PI * 2, true);
+            trackShape.holes.push(holePath);
+
+            const trackGeometry = new THREE.ExtrudeGeometry(trackShape, { depth: 0.2, bevelEnabled: false });
+            const trackMesh = new THREE.Mesh(trackGeometry, trackMaterial);
+            trackMesh.rotation.x = -Math.PI / 2;
+            trackMesh.receiveShadow = true;
+            trackGroup.add(trackMesh);
+            
+            // Linha de chegada
+            const finishLineGeo = new THREE.PlaneGeometry(20, 5);
+            const finishLineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+            const finishLine = new THREE.Mesh(finishLineGeo, finishLineMat);
+            finishLine.position.set(55, 0.2, 0);
+            finishLine.rotation.x = -Math.PI / 2;
+            finishLine.rotation.z = Math.PI / 2;
+            trackGroup.add(finishLine);
+
+            const grass = new THREE.Mesh(
+                new THREE.PlaneGeometry(500, 500),
+                new THREE.MeshStandardMaterial({ color: 0x3a5941, roughness: 1 })
+            );
+            grass.rotation.x = -Math.PI / 2;
+            grass.position.y = -0.1;
+            grass.receiveShadow = true;
+            trackGroup.add(grass);
+            
+            scene.add(trackGroup);
+        }
+
+        let smokeParticles = [];
+        let smokeGeometry, smokeMaterial;
+        function createCar(color, position) {
+            const carGroup = new THREE.Group();
+            carGroup.position.copy(position);
+
+            const bodyMat = new THREE.MeshStandardMaterial({ color: color, metalness: 0.3, roughness: 0.2 });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1, 5), bodyMat);
+            body.position.y = 0.5;
+            body.castShadow = true;
+            carGroup.add(body);
+            
+            const cabin = new THREE.Mesh(new THREE.BoxGeometry(2, 0.8, 2.5), new THREE.MeshStandardMaterial({ color: 0xcccccc }));
+            cabin.position.set(0, 1.2, -0.5);
+            cabin.castShadow = true;
+            carGroup.add(cabin);
+
+            const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.5, 16);
+            wheelGeo.rotateZ(Math.PI / 2);
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+            const wheels = [];
+            [[ -1.4, 0.4, 1.8 ], [ 1.4, 0.4, 1.8 ], [ -1.4, 0.4, -1.8 ], [ 1.4, 0.4, -1.8 ]].forEach(pos => {
+                const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+                wheel.position.set(pos[0], pos[1], pos[2]);
+                wheel.castShadow = true;
+                carGroup.add(wheel);
+                wheels.push(wheel);
+            });
+            
+            carGroup.userData = { wheels: wheels };
+            scene.add(carGroup);
+            return carGroup;
+        }
+
+        function createSmoke(car) {
+             if (!smokeGeometry) {
+                smokeGeometry = new THREE.SphereGeometry(1, 8, 8);
+                smokeMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
+            }
+            const p = new THREE.Mesh(smokeGeometry, smokeMaterial.clone());
+            const backOffset = new THREE.Vector3(0, 0.2, -2.5);
+            backOffset.applyQuaternion(car.quaternion);
+            p.position.copy(car.position).add(backOffset);
+            p.scale.set(0.1, 0.1, 0.1);
+            scene.add(p);
+            smokeParticles.push(p);
+        }
+
+        // --- CONTROLES ---
+        function setupControls() {
+            window.addEventListener('keydown', (e) => { keys[e.key] = true; });
+            window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+            
+            // Aceleração e Freio
+            setInterval(() => {
+                if (keys['ArrowUp'] || keys[' ']) { player.acceleration = 1; }
+                else if (keys['ArrowDown']) { player.acceleration = -1; }
+                else { player.acceleration = 0; }
+            }, 16);
+
+            // Marchas
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'w' || e.key === 'W') shiftGear(1);
+                if (e.key === 's' || e.key === 'S') shiftGear(-1);
+            });
+            
+             // Mobile controls
+            if ('ontouchstart' in window) {
+                document.getElementById('mobileControls').style.display = 'flex';
+                document.getElementById('accelerateBtn').addEventListener('touchstart', () => keys['ArrowUp'] = true);
+                document.getElementById('accelerateBtn').addEventListener('touchend', () => keys['ArrowUp'] = false);
+                document.getElementById('steerLeftBtn').addEventListener('touchstart', () => keys['ArrowLeft'] = true);
+                document.getElementById('steerLeftBtn').addEventListener('touchend', () => keys['ArrowLeft'] = false);
+                document.getElementById('steerRightBtn').addEventListener('touchstart', () => keys['ArrowRight'] = true);
+                document.getElementById('steerRightBtn').addEventListener('touchend', () => keys['ArrowRight'] = false);
+                document.getElementById('nitroBtn').addEventListener('touchstart', () => keys['n'] = true);
+                document.getElementById('nitroBtn').addEventListener('touchend', () => keys['n'] = false);
+                document.getElementById('gearUpBtn').addEventListener('click', () => shiftGear(1));
+                document.getElementById('gearDownBtn').addEventListener('click', () => shiftGear(-1));
+            }
+        }
+        
+        // --- MOTOR DE ÁUDIO ---
+        function setupAudio() {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const sounds = {};
+            const activeNodes = {};
+
+            function play(name) {
+                if (!audioCtx) return;
+                const sound = sounds[name];
+                if (!sound) return;
+
+                if (sound.loop && activeNodes[name]) return; // Já está tocando em loop
+
+                const source = audioCtx.createBufferSource();
+                source.buffer = sound.buffer;
+                
+                const gainNode = audioCtx.createGain();
+                gainNode.gain.value = sound.volume;
+                source.connect(gainNode).connect(audioCtx.resume().then(() => audioCtx.destination));
+                
+                source.loop = sound.loop;
+                source.start(0);
+
+                activeNodes[name] = { source, gainNode };
+                
+                if (!sound.loop) {
+                     source.onended = () => { delete activeNodes[name]; };
+                }
+            }
+
+            function stop(name) {
+                if (activeNodes[name]) {
+                    activeNodes[name].source.stop();
+                    delete activeNodes[name];
+                }
+            }
+            
+            function isPlaying(name) { return !!activeNodes[name]; }
+            
+            function setEnginePitch(rpm) {
+                if (activeNodes['engine']) {
+                    const baseFreq = 40;
+                    const maxFreq = 200;
+                    const freq = baseFreq + (rpm / 9000) * (maxFreq - baseFreq);
+                    activeNodes['engine'].source.playbackRate.value = freq / baseFreq;
+                    activeNodes['engine'].gainNode.gain.value = 0.2 + (rpm / 9000) * 0.3;
+                }
+            }
+            
+            // Gerar sons proceduralmente
+            function createSound(freq, type, duration, volume, loop = false) {
+                 const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * duration, audioCtx.sampleRate);
+                 const data = buffer.getChannelData(0);
+                 for (let i = 0; i < data.length; i++) {
+                     const t = i / audioCtx.sampleRate;
+                     switch(type) {
+                         case 'sine': data[i] = Math.sin(2 * Math.PI * freq * t) * (1 - t/duration); break;
+                         case 'noise': data[i] = (Math.random() * 2 - 1) * (1 - t/duration); break;
+                         case 'engine': data[i] = (Math.random() * 2 - 1); break; // engine é um loop contínuo
+                     }
+                 }
+                 return { buffer, volume, loop };
+            }
+            
+            sounds['shift'] = createSound(400, 'sine', 0.1, 0.5);
+            sounds['shiftPerfect'] = createSound(800, 'sine', 0.15, 0.7);
+            sounds['collision'] = createSound(50, 'noise', 0.4, 0.9);
+            sounds['countdown'] = createSound(600, 'sine', 0.2, 0.6);
+            sounds['startRace'] = createSound(1000, 'sine', 0.5, 0.8);
+            sounds['engine'] = createSound(40, 'engine', 1, 0.3, true);
+            sounds['drift'] = createSound(200, 'noise', 1, 0.4, true);
+            sounds['nitro'] = createSound(300, 'noise', 1, 0.7, true);
+
+            audio = { play, stop, isPlaying, setEnginePitch };
+            
+            // Iniciar o motor em idle
+            audio.play('engine');
+            setInterval(() => audio.setEnginePitch(player.rpm), 50);
+        }
+
+        // --- EVENT LISTENERS UI ---
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', () => {
+             endScreen.classList.add('hidden');
+             startGame();
+        });
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- PONTO DE ENTRADA ---
+        init();
+    });
+    </script>
+</body>
+</html>

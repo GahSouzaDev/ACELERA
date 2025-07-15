@@ -1,0 +1,1656 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Corrida Arcade Multiplayer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+
+        body {
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            height: 100vh;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+        }
+
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 10;
+            transition: opacity 0.5s;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #00ffea;
+            color: #00ffea;
+            letter-spacing: 3px;
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 30px;
+            color: #ffcc00;
+        }
+
+        button {
+            background: #ff3366;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            font-size: 1.2rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(255, 51, 102, 0.7);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #ff0066;
+            transform: scale(1.05);
+        }
+        
+        .mode-btn {
+            width: 250px;
+            margin: 15px;
+        }
+
+        .upgrade-option {
+            background: rgba(30, 30, 60, 0.8);
+            padding: 15px;
+            margin: 10px;
+            border-radius: 10px;
+            width: 300px;
+            text-align: center;
+            border: 2px solid #00ffea;
+        }
+
+        .upgrade-option h3 {
+            color: #ffcc00;
+            margin-bottom: 10px;
+        }
+
+        .upgrade-option p {
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #00ffea;
+            z-index: 5;
+        }
+
+        .stats div {
+            margin: 5px 0;
+        }
+
+        #speedDisplay {
+            font-size: 1.8rem;
+            color: #ffcc00;
+        }
+
+        #gearDisplay {
+            font-size: 1.5rem;
+            color: #ff3366;
+        }
+        
+        #rpmDisplay {
+            font-size: 1.2rem;
+            color: #00ffea;
+        }
+
+        #status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #00ffea;
+            z-index: 5;
+            font-size: 1.2rem;
+            color: #00ffea;
+        }
+        
+        #roomInfo {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 10px;
+            border: 2px solid #ffcc00;
+            z-index: 5;
+            font-size: 1rem;
+            color: #ffcc00;
+        }
+
+        .torque-bar {
+            width: 250px;
+            height: 30px;
+            background: #333;
+            border: 2px solid #00ffea;
+            border-radius: 15px;
+            margin-top: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .torque-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #ffcc00, #00ff00);
+            width: 0%;
+            transition: width 0.1s;
+        }
+
+        .torque-optimal {
+            position: absolute;
+            height: 100%;
+            width: 4px;
+            background: #00ffea;
+            left: 70%;
+        }
+        
+        .rpm-markers {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .rpm-marker {
+            width: 2px;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        #mobileControls {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 5;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .control-btn {
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px;
+            color: white;
+            font-size: 1.5rem;
+            border: 2px solid #00ffea;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        .control-btn:active {
+            background: rgba(0, 255, 234, 0.3);
+        }
+
+        .gear-controls {
+            flex-direction: row;
+        }
+
+        .gear-btn {
+            width: 60px;
+            height: 60px;
+            margin: 5px;
+            background: rgba(255, 51, 102, 0.7);
+        }
+
+        .gear-display {
+            background: rgba(30, 30, 60, 0.8);
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ffcc00;
+            border: 2px solid #00ffea;
+            margin-top: 10px;
+        }
+
+        #dPad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .dpad-btn {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid #00ffea;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .dpad-btn:nth-child(1) {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        .dpad-btn:nth-child(2) {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .dpad-btn:nth-child(3) {
+            grid-column: 2;
+            grid-row: 2;
+        }
+
+        .dpad-btn:nth-child(4) {
+            grid-column: 3;
+            grid-row: 2;
+        }
+
+        .dpad-btn:nth-child(5) {
+            grid-column: 2;
+            grid-row: 3;
+        }
+
+        .smoke-particle {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        
+        .explosion-particle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #ff9900;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        #instructions {
+            max-width: 600px;
+            text-align: center;
+            margin: 20px;
+            line-height: 1.6;
+        }
+
+        #instructions p {
+            margin: 10px 0;
+            color: #aaa;
+        }
+        
+        #roomInput {
+            margin: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        #roomInput input {
+            padding: 12px 20px;
+            font-size: 1.2rem;
+            border-radius: 30px;
+            border: 2px solid #00ffea;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            text-align: center;
+            width: 250px;
+            margin-bottom: 15px;
+        }
+        
+        #roomInput input::placeholder {
+            color: #aaa;
+        }
+
+        .highlight {
+            color: #ffcc00;
+            font-weight: bold;
+        }
+
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+        
+        .shake {
+            animation: shake 0.5s;
+        }
+        
+        .winner {
+            animation: winner 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            50% { transform: translateX(10px); }
+            75% { transform: translateX(-10px); }
+            100% { transform: translateX(0); }
+        }
+        
+        @keyframes winner {
+            0% { text-shadow: 0 0 5px #ffcc00; }
+            50% { text-shadow: 0 0 20px #ffcc00, 0 0 30px #ff9900; }
+            100% { text-shadow: 0 0 5px #ffcc00; }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+            h2 {
+                font-size: 1.5rem;
+            }
+            .stats, #status {
+                font-size: 0.9rem;
+                padding: 10px;
+            }
+            #speedDisplay {
+                font-size: 1.4rem;
+            }
+            .control-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 1.2rem;
+            }
+            .mode-btn {
+                width: 200px;
+                padding: 12px 20px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="startScreen" class="screen">
+            <h1>CORRIDA ARCADE</h1>
+            <h2>MULTIPLAYER 3D</h2>
+            <div id="instructions">
+                <p>Controles <span class="highlight">DESKTOP</span>: Direção ←↑→↓ | Acelerar: Espaço | Marchas: W/S</p>
+                <p>Controles <span class="highlight">MOBILE</span>: Use os controles na parte inferior da tela</p>
+                <p>Objetivo: Complete 3 voltas na pista oval antes do seu oponente!</p>
+            </div>
+            <button id="startButton" class="pulse">INICIAR CORRIDA</button>
+        </div>
+        
+        <div id="modeScreen" class="screen hidden">
+            <h1>SELECIONE O MODO</h1>
+            <button id="createRoomBtn" class="mode-btn">CRIAR SALA</button>
+            <button id="joinRoomBtn" class="mode-btn">ENTRAR EM SALA</button>
+            <button id="offlineBtn" class="mode-btn">JOGAR OFFLINE</button>
+            
+            <div id="roomInput" class="hidden">
+                <input type="text" id="roomCode" placeholder="Digite o código da sala">
+                <button id="confirmJoinBtn">ENTRAR NA SALA</button>
+            </div>
+        </div>
+
+        <div id="upgradeScreen" class="screen hidden">
+            <h1>LOJA DE UPGRADES</h1>
+            <div class="upgrade-option">
+                <h3>MOTOR TURBO</h3>
+                <p>Aumenta o torque máximo em 20%</p>
+                <p>Custo: $100</p>
+                <button class="buy-button" data-upgrade="torque">COMPRAR</button>
+            </div>
+            <div class="upgrade-option">
+                <h3>AERODINÂMICA</h3>
+                <p>Aumenta a velocidade máxima em 15%</p>
+                <p>Custo: $150</p>
+                <button class="buy-button" data-upgrade="speed">COMPRAR</button>
+            </div>
+            <div class="upgrade-option">
+                <h3>TRANSMISSÃO ESPORTIVA</h3>
+                <p>Amplia a faixa útil de cada marcha</p>
+                <p>Custo: $200</p>
+                <button class="buy-button" data-upgrade="gears">COMPRAR</button>
+            </div>
+            <button id="raceButton">INICIAR CORRIDA</button>
+        </div>
+
+        <div id="gameScreen" class="screen hidden">
+            <canvas id="gameCanvas"></canvas>
+            
+            <div class="stats">
+                <div>VELOCIDADE: <span id="speedDisplay">0</span> km/h</div>
+                <div>MARCHA: <span id="gearDisplay">N</span> | RPM: <span id="rpmDisplay">0</span></div>
+                <div>TORQUE:</div>
+                <div class="torque-bar">
+                    <div class="rpm-markers">
+                        <div class="rpm-marker"></div>
+                        <div class="rpm-marker"></div>
+                        <div class="rpm-marker"></div>
+                        <div class="rpm-marker"></div>
+                        <div class="rpm-marker"></div>
+                    </div>
+                    <div class="torque-fill"></div>
+                    <div class="torque-optimal"></div>
+                </div>
+                <div id="lapCounter">VOLTA: 0/3</div>
+            </div>
+            
+            <div id="status">Conectando ao servidor...</div>
+            <div id="roomInfo"></div>
+            
+            <div id="mobileControls">
+                <div class="control-group">
+                    <div class="control-btn" id="accelerateBtn">A</div>
+                    <div class="control-btn" id="brakeBtn">F</div>
+                </div>
+                
+                <div class="control-group">
+                    <div id="dPad">
+                        <div class="dpad-btn">↑</div>
+                        <div class="dpad-btn">←</div>
+                        <div class="dpad-btn">↓</div>
+                        <div class="dpad-btn">→</div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <div class="gear-controls">
+                        <div class="control-btn gear-btn" id="gearUpBtn">+</div>
+                        <div class="control-btn gear-btn" id="gearDownBtn">-</div>
+                    </div>
+                    <div class="gear-display" id="mobileGearDisplay">N</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="resultScreen" class="screen hidden">
+            <h1 id="resultTitle">RESULTADO</h1>
+            <h2 id="resultMessage"></h2>
+            <button id="playAgainBtn">JOGAR NOVAMENTE</button>
+        </div>
+    </div>
+
+    <script>
+        // Variáveis globais
+        let scene, camera, renderer;
+        let localCar, remoteCar, track;
+        let smokeParticles = [];
+        let clock = new THREE.Clock();
+        let deltaTime = 0;
+        let lastCheckpoint = 0;
+        let gameActive = false;
+        
+        // Configurações do jogo
+        const gameConfig = {
+            playerId: null,
+            roomId: null,
+            status: 'connecting',
+            gear: 'N', // R, N, 1, 2, 3, 4
+            speed: 0,
+            rpm: 0,
+            maxSpeed: 0,
+            acceleration: 0,
+            torque: 100,
+            maxTorque: 100,
+            steering: 0,
+            position: new THREE.Vector3(0, 0.5, 0),
+            rotation: 0,
+            lap: 0,
+            upgrades: {
+                torque: 0,
+                speed: 0,
+                gears: 0
+            },
+            money: 300,
+            gameMode: null, // 'create', 'join', 'offline'
+            connected: false
+        };
+        
+        // Configurações de marchas
+        const gearSettings = {
+            'R': { minRPM: 500, maxRPM: 3000, optimal: 1500, torqueMultiplier: 0.7 },
+            'N': { minRPM: 0, maxRPM: 1000, optimal: 500, torqueMultiplier: 0.2 },
+            '1': { minRPM: 1000, maxRPM: 4000, optimal: 2500, torqueMultiplier: 1.0 },
+            '2': { minRPM: 1500, maxRPM: 5000, optimal: 3500, torqueMultiplier: 0.9 },
+            '3': { minRPM: 2000, maxRPM: 6000, optimal: 4500, torqueMultiplier: 0.8 },
+            '4': { minRPM: 2500, maxRPM: 7000, optimal: 5500, torqueMultiplier: 0.7 }
+        };
+        
+        // Elementos da interface
+        const startScreen = document.getElementById('startScreen');
+        const modeScreen = document.getElementById('modeScreen');
+        const upgradeScreen = document.getElementById('upgradeScreen');
+        const gameScreen = document.getElementById('gameScreen');
+        const resultScreen = document.getElementById('resultScreen');
+        const startButton = document.getElementById('startButton');
+        const createRoomBtn = document.getElementById('createRoomBtn');
+        const joinRoomBtn = document.getElementById('joinRoomBtn');
+        const offlineBtn = document.getElementById('offlineBtn');
+        const confirmJoinBtn = document.getElementById('confirmJoinBtn');
+        const raceButton = document.getElementById('raceButton');
+        const playAgainBtn = document.getElementById('playAgainBtn');
+        const statusDisplay = document.getElementById('status');
+        const roomInfo = document.getElementById('roomInfo');
+        const speedDisplay = document.getElementById('speedDisplay');
+        const gearDisplay = document.getElementById('gearDisplay');
+        const rpmDisplay = document.getElementById('rpmDisplay');
+        const mobileGearDisplay = document.getElementById('mobileGearDisplay');
+        const torqueFill = document.querySelector('.torque-fill');
+        const lapCounter = document.getElementById('lapCounter');
+        const roomInput = document.getElementById('roomInput');
+        const roomCodeInput = document.getElementById('roomCode');
+        
+        // Elementos de controle mobile
+        const accelerateBtn = document.getElementById('accelerateBtn');
+        const brakeBtn = document.getElementById('brakeBtn');
+        const gearUpBtn = document.getElementById('gearUpBtn');
+        const gearDownBtn = document.getElementById('gearDownBtn');
+        
+        // WebSocket e WebRTC
+        let ws;
+        let peerConnection;
+        let dataChannel;
+        const wsUrl = 'ws://' + window.location.hostname + ':8080';
+        
+        // Inicialização do jogo
+        function initGame() {
+            // Configurar Three.js
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            scene.fog = new THREE.Fog(0x87CEEB, 100, 500);
+            
+            // Configurar câmera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 15, -20);
+            camera.lookAt(0, 0, 0);
+            
+            // Configurar renderizador
+            renderer = new THREE.WebGLRenderer({ 
+                canvas: document.getElementById('gameCanvas'), 
+                antialias: true,
+                alpha: true
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            
+            // Adicionar iluminação
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(50, 50, 50);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 1024;
+            directionalLight.shadow.mapSize.height = 1024;
+            scene.add(directionalLight);
+            
+            // Criar pista
+            createTrack();
+            
+            // Criar carros
+            createLocalCar();
+            createRemoteCar();
+            
+            // Configurar controles
+            setupControls();
+            
+            // Iniciar loop de animação
+            animate();
+            
+            // Lidar com redimensionamento da janela
+            window.addEventListener('resize', onWindowResize);
+        }
+        
+        // Criar pista de corrida
+        function createTrack() {
+            const trackGroup = new THREE.Group();
+            
+            // Asfalto
+            const trackGeometry = new THREE.RingGeometry(60, 90, 128, 16);
+            const trackMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x333333,
+                roughness: 0.9,
+                metalness: 0.1
+            });
+            const trackMesh = new THREE.Mesh(trackGeometry, trackMaterial);
+            trackMesh.rotation.x = -Math.PI / 2;
+            trackMesh.receiveShadow = true;
+            trackGroup.add(trackMesh);
+            
+            // Bordas da pista
+            const borderGeometry = new THREE.TorusGeometry(90, 2, 16, 128);
+            const borderMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+            const outerBorder = new THREE.Mesh(borderGeometry, borderMaterial);
+            outerBorder.rotation.x = Math.PI / 2;
+            outerBorder.position.y = 0.1;
+            outerBorder.receiveShadow = true;
+            trackGroup.add(outerBorder);
+            
+            const innerBorder = new THREE.Mesh(new THREE.TorusGeometry(60, 2, 16, 128), borderMaterial);
+            innerBorder.rotation.x = Math.PI / 2;
+            innerBorder.position.y = 0.1;
+            innerBorder.receiveShadow = true;
+            trackGroup.add(innerBorder);
+            
+            // Linhas da pista
+            const lineMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            for (let i = 0; i < 16; i++) {
+                const angle = (i / 16) * Math.PI * 2;
+                const line = new THREE.Mesh(
+                    new THREE.BoxGeometry(3, 0.2, 10),
+                    lineMaterial
+                );
+                line.position.set(Math.cos(angle) * 75, 0.11, Math.sin(angle) * 75);
+                line.rotation.y = -angle;
+                line.receiveShadow = true;
+                trackGroup.add(line);
+            }
+            
+            // Linha de chegada
+            const finishLine = new THREE.Mesh(
+                new THREE.BoxGeometry(10, 0.2, 3),
+                new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+            );
+            finishLine.position.set(75, 0.11, 0);
+            finishLine.rotation.y = Math.PI / 2;
+            finishLine.receiveShadow = true;
+            trackGroup.add(finishLine);
+            
+            // Grama
+            const grassGeometry = new THREE.PlaneGeometry(500, 500, 10, 10);
+            const grassMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x228822,
+                roughness: 1,
+                metalness: 0
+            });
+            const grass = new THREE.Mesh(grassGeometry, grassMaterial);
+            grass.rotation.x = -Math.PI / 2;
+            grass.position.y = -0.1;
+            grass.receiveShadow = true;
+            trackGroup.add(grass);
+            
+            // Placas de publicidade
+            const billboardMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const billboard = new THREE.Mesh(
+                    new THREE.BoxGeometry(10, 5, 0.5),
+                    billboardMaterial
+                );
+                billboard.position.set(Math.cos(angle) * 100, 2.5, Math.sin(angle) * 100);
+                billboard.rotation.y = -angle;
+                billboard.receiveShadow = true;
+                billboard.castShadow = true;
+                trackGroup.add(billboard);
+            }
+            
+            scene.add(trackGroup);
+            track = trackGroup;
+        }
+        
+        // Criar carro local
+        function createLocalCar() {
+            const carGroup = new THREE.Group();
+            
+            // Corpo do carro
+            const bodyGeometry = new THREE.BoxGeometry(3, 1, 5);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x3366ff });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.5;
+            body.castShadow = true;
+            carGroup.add(body);
+            
+            // Capô
+            const hoodGeometry = new THREE.BoxGeometry(2.8, 0.5, 2);
+            const hoodMaterial = new THREE.MeshStandardMaterial({ color: 0x2244cc });
+            const hood = new THREE.Mesh(hoodGeometry, hoodMaterial);
+            hood.position.set(0, 0.75, 1);
+            hood.castShadow = true;
+            carGroup.add(hood);
+            
+            // Rodas
+            const wheelGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.8, 16);
+            wheelGeometry.rotateZ(Math.PI / 2);
+            const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+            
+            const wheelPositions = [
+                { x: -1.5, y: 0.5, z: 2 },
+                { x: 1.5, y: 0.5, z: 2 },
+                { x: -1.5, y: 0.5, z: -2 },
+                { x: 1.5, y: 0.5, z: -2 }
+            ];
+            
+            const wheels = [];
+            wheelPositions.forEach(pos => {
+                const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                wheel.position.set(pos.x, pos.y, pos.z);
+                wheel.castShadow = true;
+                carGroup.add(wheel);
+                wheels.push(wheel);
+            });
+            
+            // Faróis
+            const lightGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+            const lightMaterial = new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0xffff00 });
+            
+            const frontLight1 = new THREE.Mesh(lightGeometry, lightMaterial);
+            frontLight1.position.set(-0.8, 0.7, 2.5);
+            carGroup.add(frontLight1);
+            
+            const frontLight2 = new THREE.Mesh(lightGeometry, lightMaterial);
+            frontLight2.position.set(0.8, 0.7, 2.5);
+            carGroup.add(frontLight2);
+            
+            scene.add(carGroup);
+            localCar = {
+                group: carGroup,
+                wheels: wheels,
+                position: new THREE.Vector3(75, 0.5, 0),
+                rotation: Math.PI / 2,
+                targetRotation: Math.PI / 2
+            };
+            
+            localCar.group.position.copy(localCar.position);
+            localCar.group.rotation.y = localCar.rotation;
+        }
+        
+        // Criar carro remoto
+        function createRemoteCar() {
+            const carGroup = new THREE.Group();
+            
+            // Corpo do carro
+            const bodyGeometry = new THREE.BoxGeometry(3, 1, 5);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xff3366 });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.5;
+            body.castShadow = true;
+            carGroup.add(body);
+            
+            // Capô
+            const hoodGeometry = new THREE.BoxGeometry(2.8, 0.5, 2);
+            const hoodMaterial = new THREE.MeshStandardMaterial({ color: 0xcc2244 });
+            const hood = new THREE.Mesh(hoodGeometry, hoodMaterial);
+            hood.position.set(0, 0.75, 1);
+            hood.castShadow = true;
+            carGroup.add(hood);
+            
+            // Rodas
+            const wheelGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.8, 16);
+            wheelGeometry.rotateZ(Math.PI / 2);
+            const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+            
+            const wheelPositions = [
+                { x: -1.5, y: 0.5, z: 2 },
+                { x: 1.5, y: 0.5, z: 2 },
+                { x: -1.5, y: 0.5, z: -2 },
+                { x: 1.5, y: 0.5, z: -2 }
+            ];
+            
+            const wheels = [];
+            wheelPositions.forEach(pos => {
+                const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                wheel.position.set(pos.x, pos.y, pos.z);
+                wheel.castShadow = true;
+                carGroup.add(wheel);
+                wheels.push(wheel);
+            });
+            
+            scene.add(carGroup);
+            remoteCar = {
+                group: carGroup,
+                wheels: wheels,
+                position: new THREE.Vector3(65, 0.5, 0),
+                rotation: Math.PI / 2,
+                speed: 0,
+                acceleration: 0,
+                steering: 0,
+                lap: 0
+            };
+            
+            remoteCar.group.position.copy(remoteCar.position);
+            remoteCar.group.rotation.y = remoteCar.rotation;
+        }
+        
+        // Configurar controles
+        function setupControls() {
+            // Controles de teclado
+            const keys = {};
+            
+            window.addEventListener('keydown', (e) => {
+                keys[e.key] = true;
+                
+                // Troca de marchas
+                if (e.key === 'w' || e.key === 'W') shiftGearUp();
+                if (e.key === 's' || e.key === 'S') shiftGearDown();
+            });
+            
+            window.addEventListener('keyup', (e) => {
+                keys[e.key] = false;
+            });
+            
+            // Controles mobile
+            accelerateBtn.addEventListener('touchstart', () => {
+                keys[' '] = true;
+                accelerateBtn.style.background = 'rgba(0, 255, 234, 0.5)';
+            });
+            
+            accelerateBtn.addEventListener('touchend', () => {
+                keys[' '] = false;
+                accelerateBtn.style.background = 'rgba(255, 255, 255, 0.2)';
+            });
+            
+            brakeBtn.addEventListener('touchstart', () => {
+                keys['ArrowDown'] = true;
+                brakeBtn.style.background = 'rgba(0, 255, 234, 0.5)';
+            });
+            
+            brakeBtn.addEventListener('touchend', () => {
+                keys['ArrowDown'] = false;
+                brakeBtn.style.background = 'rgba(255, 255, 255, 0.2)';
+            });
+            
+            gearUpBtn.addEventListener('click', shiftGearUp);
+            gearDownBtn.addEventListener('click', shiftGearDown);
+            
+            // Controles de direção mobile
+            const dpadButtons = document.querySelectorAll('.dpad-btn');
+            dpadButtons.forEach(btn => {
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    const direction = btn.textContent;
+                    if (direction === '↑') keys['ArrowUp'] = true;
+                    if (direction === '↓') keys['ArrowDown'] = true;
+                    if (direction === '←') keys['ArrowLeft'] = true;
+                    if (direction === '→') keys['ArrowRight'] = true;
+                    btn.style.background = 'rgba(0, 255, 234, 0.5)';
+                });
+                
+                btn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    const direction = btn.textContent;
+                    if (direction === '↑') keys['ArrowUp'] = false;
+                    if (direction === '↓') keys['ArrowDown'] = false;
+                    if (direction === '←') keys['ArrowLeft'] = false;
+                    if (direction === '→') keys['ArrowRight'] = false;
+                    btn.style.background = 'rgba(255, 255, 255, 0.2)';
+                });
+            });
+            
+            // Atualizar controles a cada frame
+            function updateControls() {
+                if (!gameActive) return;
+                
+                // Aceleração
+                gameConfig.acceleration = keys[' '] ? 1 : 0;
+                if (keys['ArrowDown']) gameConfig.acceleration = -0.5;
+                
+                // Direção
+                gameConfig.steering = 0;
+                if (keys['ArrowLeft']) gameConfig.steering = 1;
+                if (keys['ArrowRight']) gameConfig.steering = -1;
+                
+                // Atualizar física
+                updatePhysics();
+            }
+            
+            // Adicionar ao loop de animação
+            setInterval(updateControls, 16);
+        }
+        
+        // Conectar ao servidor WebSocket
+        function connectToServer() {
+            statusDisplay.textContent = "Conectando ao servidor...";
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                statusDisplay.textContent = "Conectado. Aguardando adversário...";
+                // Entrar na sala
+                ws.send(JSON.stringify({ 
+                    type: 'join', 
+                    roomId: gameConfig.roomId,
+                    playerId: gameConfig.playerId
+                }));
+            };
+            
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                
+                if (message.type === 'start') {
+                    gameConfig.playerId = message.playerId;
+                    statusDisplay.textContent = "Jogo iniciado!";
+                    gameActive = true;
+                    startWebRTC();
+                } else if (message.type === 'offer') {
+                    handleOffer(message);
+                } else if (message.type === 'answer') {
+                    handleAnswer(message);
+                } else if (message.type === 'ice') {
+                    handleICECandidate(message);
+                } else if (message.type === 'roomCreated') {
+                    gameConfig.roomId = message.roomId;
+                    roomInfo.textContent = `Sala: ${message.roomId} | Aguardando jogador 2...`;
+                    statusDisplay.textContent = "Sala criada com sucesso!";
+                } else if (message.type === 'roomJoined') {
+                    statusDisplay.textContent = "Conectado à sala! Aguardando início...";
+                } else if (message.type === 'roomFull') {
+                    statusDisplay.textContent = "Sala cheia! Tente outra sala.";
+                } else if (message.type === 'roomNotFound') {
+                    statusDisplay.textContent = "Sala não encontrada! Verifique o código.";
+                }
+            };
+            
+            ws.onerror = (error) => {
+                statusDisplay.textContent = "Erro de conexão: " + error.message;
+            };
+            
+            ws.onclose = () => {
+                if (gameConfig.gameMode !== 'offline') {
+                    statusDisplay.textContent = "Conexão fechada. Recarregue a página para tentar novamente.";
+                }
+            };
+        }
+        
+        // Configurar WebRTC
+        function startWebRTC() {
+            const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+            peerConnection = new RTCPeerConnection(config);
+            
+            // Canal de dados para comunicação do jogo
+            dataChannel = peerConnection.createDataChannel('gameData');
+            dataChannel.onopen = () => {
+                statusDisplay.textContent = "Conexão P2P estabelecida!";
+                gameConfig.connected = true;
+                setInterval(sendGameState, 100);
+            };
+            
+            dataChannel.onmessage = (event) => {
+                const remoteState = JSON.parse(event.data);
+                updateRemoteCar(remoteState);
+            };
+            
+            // ICE Candidates
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    ws.send(JSON.stringify({
+                        type: 'ice',
+                        candidate: event.candidate,
+                        roomId: gameConfig.roomId,
+                        playerId: gameConfig.playerId
+                    }));
+                }
+            };
+            
+            // Se somos o primeiro jogador, criamos a offer
+            if (gameConfig.playerId === 0) {
+                peerConnection.createOffer()
+                    .then(offer => peerConnection.setLocalDescription(offer))
+                    .then(() => {
+                        ws.send(JSON.stringify({
+                            type: 'offer',
+                            offer: peerConnection.localDescription,
+                            roomId: gameConfig.roomId,
+                            playerId: gameConfig.playerId
+                        }));
+                    });
+            }
+        }
+        
+        // Lidar com oferta WebRTC
+        function handleOffer(offer) {
+            peerConnection.setRemoteDescription(new RTCSessionDescription(offer.offer));
+            
+            peerConnection.createAnswer()
+                .then(answer => peerConnection.setLocalDescription(answer))
+                .then(() => {
+                    ws.send(JSON.stringify({
+                        type: 'answer',
+                        answer: peerConnection.localDescription,
+                        roomId: gameConfig.roomId,
+                        playerId: gameConfig.playerId
+                    }));
+                });
+        }
+        
+        // Lidar com resposta WebRTC
+        function handleAnswer(answer) {
+            peerConnection.setRemoteDescription(new RTCSessionDescription(answer.answer));
+        }
+        
+        // Lidar com candidato ICE
+        function handleICECandidate(candidate) {
+            peerConnection.addIceCandidate(new RTCIceCandidate(candidate.candidate));
+        }
+        
+        // Enviar estado do jogo para o adversário
+        function sendGameState() {
+            if (dataChannel && dataChannel.readyState === 'open' && gameActive) {
+                const gameState = {
+                    position: [localCar.position.x, localCar.position.y, localCar.position.z],
+                    rotation: localCar.rotation,
+                    speed: gameConfig.speed,
+                    rpm: gameConfig.rpm,
+                    gear: gameConfig.gear,
+                    lap: gameConfig.lap
+                };
+                dataChannel.send(JSON.stringify(gameState));
+            }
+        }
+        
+        // Atualizar carro remoto com dados recebidos
+        function updateRemoteCar(remoteState) {
+            if (!remoteCar) return;
+            
+            remoteCar.position.set(remoteState.position[0], remoteState.position[1], remoteState.position[2]);
+            remoteCar.rotation = remoteState.rotation;
+            remoteCar.speed = remoteState.speed;
+            remoteCar.lap = remoteState.lap;
+            
+            remoteCar.group.position.copy(remoteCar.position);
+            remoteCar.group.rotation.y = remoteCar.rotation;
+            
+            // Atualizar rotação das rodas
+            const wheelRotation = remoteState.speed * deltaTime * 2;
+            remoteCar.wheels.forEach(wheel => {
+                wheel.rotation.x += wheelRotation;
+            });
+            
+            // Criar efeito de fumaça
+            if (remoteState.speed > 30 && Math.random() < 0.3) {
+                createSmoke(remoteCar.position.x, remoteCar.position.z, remoteState.rotation, 0xff3366);
+            }
+        }
+        
+        // Atualizar física do carro
+        function updatePhysics() {
+            if (!gameActive) return;
+            
+            const gear = gearSettings[gameConfig.gear];
+            
+            // Calcular RPM baseado na marcha e velocidade
+            let targetRPM = 0;
+            
+            if (gameConfig.gear === 'N') {
+                targetRPM = 1000;
+            } else {
+                // RPM proporcional à velocidade e marcha
+                const speedRatio = Math.abs(gameConfig.speed) / (gear.maxRPM / 100);
+                targetRPM = gear.minRPM + (speedRatio * (gear.maxRPM - gear.minRPM));
+                
+                // Limitar RPM
+                targetRPM = Math.max(gear.minRPM, Math.min(gear.maxRPM, targetRPM));
+                
+                // Aumentar RPM quando acelerando
+                if (gameConfig.acceleration > 0) {
+                    targetRPM += 500 * gameConfig.acceleration;
+                }
+            }
+            
+            // Suavizar a transição de RPM
+            gameConfig.rpm += (targetRPM - gameConfig.rpm) * 0.1;
+            
+            // Calcular torque baseado na RPM e marcha
+            let torqueEfficiency = 1.0;
+            const optimalRPM = gear.optimal;
+            const rpmDifference = Math.abs(gameConfig.rpm - optimalRPM);
+            
+            // Reduzir torque quando fora da faixa ideal
+            if (rpmDifference > 500) {
+                torqueEfficiency = Math.max(0.3, 1 - (rpmDifference / 2000));
+            }
+            
+            // Aplicar upgrades
+            const torqueMultiplier = 1 + (gameConfig.upgrades.torque * 0.2);
+            const speedMultiplier = 1 + (gameConfig.upgrades.speed * 0.15);
+            const gearMultiplier = 1 + (gameConfig.upgrades.gears * 0.25);
+            
+            // Calcular aceleração baseada no torque e RPM
+            let acceleration = gameConfig.acceleration * gear.torqueMultiplier * torqueEfficiency * torqueMultiplier;
+            
+            // Aplicar embreagem - reduzir aceleração quando RPM muito baixo
+            if (gameConfig.rpm < gear.minRPM + 500 && gameConfig.gear !== 'N' && gameConfig.gear !== 'R') {
+                acceleration *= Math.max(0.1, (gameConfig.rpm - gear.minRPM) / 500);
+            }
+            
+            // Atualizar velocidade
+            gameConfig.speed += acceleration * deltaTime * 20;
+            
+            // Limitar velocidade baseado na marcha
+            if (gameConfig.gear === 'R') {
+                gameConfig.speed = Math.max(-30 * speedMultiplier, Math.min(0, gameConfig.speed));
+            } else if (gameConfig.gear === 'N') {
+                gameConfig.speed *= 0.95; // Freio natural
+            } else {
+                const maxSpeed = gear.maxRPM / 10 * speedMultiplier * gearMultiplier;
+                gameConfig.speed = Math.max(0, Math.min(maxSpeed, gameConfig.speed));
+            }
+            
+            // Aplicar arrasto
+            gameConfig.speed *= 0.98;
+            
+            // Atualizar torque para exibição
+            gameConfig.torque = Math.round(torqueEfficiency * 100);
+            
+            // Atualizar direção
+            const steeringAmount = gameConfig.steering * deltaTime * 1.5;
+            if (Math.abs(gameConfig.speed) > 5) {
+                localCar.targetRotation += steeringAmount * Math.sign(gameConfig.speed);
+            }
+            
+            // Suavizar rotação
+            localCar.rotation += (localCar.targetRotation - localCar.rotation) * 0.1;
+            
+            // Calcular nova posição
+            const direction = new THREE.Vector3(
+                Math.sin(localCar.rotation),
+                0,
+                Math.cos(localCar.rotation)
+            );
+            
+            localCar.position.add(direction.multiplyScalar(gameConfig.speed * deltaTime));
+            
+            // Verificar se completou uma volta
+            checkLapCompletion();
+            
+            // Atualizar posição e rotação do carro
+            localCar.group.position.copy(localCar.position);
+            localCar.group.rotation.y = localCar.rotation;
+            
+            // Atualizar rotação das rodas
+            const wheelRotation = gameConfig.speed * deltaTime * 2;
+            localCar.wheels.forEach(wheel => {
+                wheel.rotation.x += wheelRotation;
+            });
+            
+            // Criar efeito de fumaça ao acelerar
+            if (gameConfig.acceleration > 0 && gameConfig.speed > 30 && Math.random() < 0.3) {
+                createSmoke(localCar.position.x, localCar.position.z, localCar.rotation, 0x3366ff);
+            }
+            
+            // Verificar colisão com adversário
+            checkCollision();
+            
+            // Atualizar câmera
+            updateCamera();
+            
+            // Atualizar interface
+            updateUI();
+            
+            // Atualizar IA se for modo offline
+            if (gameConfig.gameMode === 'offline') {
+                updateAI();
+            }
+        }
+        
+        // Atualizar carro IA (modo offline)
+        function updateAI() {
+            if (!remoteCar || !gameActive) return;
+            
+            // Calcular direção para o centro da pista
+            const center = new THREE.Vector3(0, 0, 0);
+            const directionToCenter = new THREE.Vector3().subVectors(center, remoteCar.position).normalize();
+            const targetAngle = Math.atan2(directionToCenter.x, directionToCenter.z);
+            
+            // Calcular diferença angular
+            let angleDiff = targetAngle - remoteCar.rotation;
+            
+            // Normalizar o ângulo para [-PI, PI]
+            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+            
+            // Definir direção
+            remoteCar.steering = angleDiff > 0 ? 1 : -1;
+            
+            // Acelerar baseado na distância do jogador
+            const distanceToPlayer = remoteCar.position.distanceTo(localCar.position);
+            remoteCar.acceleration = distanceToPlayer > 20 ? 1 : 0.5;
+            
+            // Atualizar física do carro IA
+            const gear = gearSettings['3']; // IA usa sempre 3ª marcha
+            
+            // Atualizar velocidade
+            remoteCar.speed += remoteCar.acceleration * deltaTime * 15;
+            remoteCar.speed = Math.min(gear.maxRPM / 10, remoteCar.speed);
+            remoteCar.speed *= 0.98;
+            
+            // Atualizar rotação
+            if (Math.abs(remoteCar.speed) > 5) {
+                remoteCar.rotation += remoteCar.steering * deltaTime * Math.sign(remoteCar.speed);
+            }
+            
+            // Calcular nova posição
+            const aiDirection = new THREE.Vector3(
+                Math.sin(remoteCar.rotation),
+                0,
+                Math.cos(remoteCar.rotation)
+            );
+            
+            remoteCar.position.add(aiDirection.multiplyScalar(remoteCar.speed * deltaTime));
+            
+            // Atualizar posição e rotação do carro IA
+            remoteCar.group.position.copy(remoteCar.position);
+            remoteCar.group.rotation.y = remoteCar.rotation;
+            
+            // Atualizar rotação das rodas
+            const wheelRotation = remoteCar.speed * deltaTime * 2;
+            remoteCar.wheels.forEach(wheel => {
+                wheel.rotation.x += wheelRotation;
+            });
+            
+            // Verificar se completou uma volta
+            checkAIlap();
+        }
+        
+        // Verificar se o carro completou uma volta
+        function checkLapCompletion() {
+            // Sistema de detecção de linha de chegada
+            if (localCar.position.z > -5 && localCar.position.z < 5) {
+                if (localCar.position.x > 70 && localCar.position.x < 80) {
+                    // Verificar se passou pelo checkpoint oposto
+                    if (lastCheckpoint === 1) {
+                        gameConfig.lap++;
+                        lapCounter.textContent = `VOLTA: ${gameConfig.lap}/3`;
+                        lastCheckpoint = 0;
+                        
+                        // Verificar vitória
+                        if (gameConfig.lap >= 3) {
+                            endGame(true);
+                        }
+                    }
+                }
+            }
+            
+            // Checkpoint oposto
+            if (localCar.position.z > -5 && localCar.position.z < 5) {
+                if (localCar.position.x > -80 && localCar.position.x < -70) {
+                    lastCheckpoint = 1;
+                }
+            }
+        }
+        
+        // Verificar volta da IA
+        function checkAIlap() {
+            if (remoteCar.position.z > -5 && remoteCar.position.z < 5) {
+                if (remoteCar.position.x > 70 && remoteCar.position.x < 80) {
+                    if (remoteCar.lastCheckpoint === 1) {
+                        remoteCar.lap++;
+                        remoteCar.lastCheckpoint = 0;
+                        
+                        if (remoteCar.lap >= 3) {
+                            endGame(false);
+                        }
+                    }
+                }
+            }
+            
+            if (remoteCar.position.z > -5 && remoteCar.position.z < 5) {
+                if (remoteCar.position.x > -80 && remoteCar.position.x < -70) {
+                    remoteCar.lastCheckpoint = 1;
+                }
+            }
+        }
+        
+        // Verificar colisão entre carros
+        function checkCollision() {
+            if (!remoteCar) return;
+            
+            const distance = localCar.position.distanceTo(remoteCar.position);
+            if (distance < 4) {
+                // Efeito de colisão
+                createExplosion(
+                    (localCar.position.x + remoteCar.position.x) / 2,
+                    (localCar.position.z + remoteCar.position.z) / 2
+                );
+                
+                // Empurrar os carros
+                const direction = new THREE.Vector3().subVectors(localCar.position, remoteCar.position).normalize();
+                localCar.position.add(direction.multiplyScalar(2));
+                remoteCar.position.sub(direction.multiplyScalar(2));
+                
+                // Reduzir velocidade
+                gameConfig.speed *= 0.5;
+                if (remoteCar.speed) remoteCar.speed *= 0.5;
+            }
+        }
+        
+        // Atualizar posição da câmera
+        function updateCamera() {
+            const carPosition = localCar.position.clone();
+            const offset = new THREE.Vector3(
+                Math.sin(localCar.rotation) * 15,
+                -10,
+                Math.cos(localCar.rotation) * 15
+            );
+            
+            camera.position.copy(carPosition.sub(offset));
+            camera.lookAt(localCar.position.x, localCar.position.y + 2, localCar.position.z);
+        }
+        
+        // Atualizar interface do usuário
+        function updateUI() {
+            // Atualizar velocidade, RPM e marcha
+            speedDisplay.textContent = Math.abs(Math.round(gameConfig.speed));
+            rpmDisplay.textContent = Math.round(gameConfig.rpm);
+            gearDisplay.textContent = gameConfig.gear;
+            mobileGearDisplay.textContent = gameConfig.gear;
+            
+            // Atualizar barra de torque
+            torqueFill.style.width = `${gameConfig.torque}%`;
+        }
+        
+        // Criar efeito de fumaça
+        function createSmoke(x, z, rotation, color) {
+            const smoke = document.createElement('div');
+            smoke.className = 'smoke-particle';
+            smoke.style.left = `${50 + (x / 2)}%`;
+            smoke.style.top = `${50 - (z / 2)}%`;
+            smoke.style.backgroundColor = `rgba(${(color >> 16) & 0xff}, ${(color >> 8) & 0xff}, ${color & 0xff}, 0.7)`;
+            document.getElementById('gameContainer').appendChild(smoke);
+            
+            // Animação da fumaça
+            let size = 10;
+            let opacity = 0.7;
+            const angle = rotation + (Math.random() - 0.5) * Math.PI/4;
+            const speed = 1 + Math.random() * 2;
+            
+            const animateSmoke = () => {
+                size += 0.8;
+                opacity -= 0.015;
+                
+                if (opacity <= 0) {
+                    smoke.remove();
+                    return;
+                }
+                
+                smoke.style.width = `${size}px`;
+                smoke.style.height = `${size}px`;
+                smoke.style.opacity = opacity;
+                smoke.style.transform = `translate(${Math.cos(angle) * speed}px, ${Math.sin(angle) * speed}px)`;
+                
+                requestAnimationFrame(animateSmoke);
+            };
+            
+            animateSmoke();
+        }
+        
+        // Criar efeito de explosão
+        function createExplosion(x, z) {
+            for (let i = 0; i < 15; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'explosion-particle';
+                particle.style.left = `${50 + (x / 2)}%`;
+                particle.style.top = `${50 - (z / 2)}%`;
+                document.getElementById('gameContainer').appendChild(particle);
+                
+                // Animação da partícula
+                let size = 10;
+                let opacity = 1;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 5;
+                
+                const animateParticle = () => {
+                    size += 1;
+                    opacity -= 0.05;
+                    
+                    if (opacity <= 0) {
+                        particle.remove();
+                        return;
+                    }
+                    
+                    particle.style.width = `${size}px`;
+                    particle.style.height = `${size}px`;
+                    particle.style.opacity = opacity;
+                    particle.style.transform = `translate(${Math.cos(angle) * speed}px, ${Math.sin(angle) * speed}px)`;
+                    
+                    requestAnimationFrame(animateParticle);
+                };
+                
+                animateParticle();
+            }
+        }
+        
+        // Trocar marcha para cima
+        function shiftGearUp() {
+            if (!gameActive) return;
+            
+            const gears = ['R', 'N', '1', '2', '3', '4'];
+            const currentIndex = gears.indexOf(gameConfig.gear);
+            if (currentIndex < gears.length - 1) {
+                gameConfig.gear = gears[currentIndex + 1];
+                // Efeito de som de mudança de marcha
+                createGearShiftEffect();
+            }
+        }
+        
+        // Trocar marcha para baixo
+        function shiftGearDown() {
+            if (!gameActive) return;
+            
+            const gears = ['R', 'N', '1', '2', '3', '4'];
+            const currentIndex = gears.indexOf(gameConfig.gear);
+            if (currentIndex > 0) {
+                gameConfig.gear = gears[currentIndex - 1];
+                // Efeito de som de mudança de marcha
+                createGearShiftEffect();
+            }
+        }
+        
+        // Efeito visual de mudança de marcha
+        function createGearShiftEffect() {
+            const gearDisplay = document.getElementById('gearDisplay');
+            gearDisplay.classList.add('shake');
+            setTimeout(() => {
+                gearDisplay.classList.remove('shake');
+            }, 500);
+        }
+        
+        // Finalizar o jogo
+        function endGame(isWinner) {
+            gameActive = false;
+            
+            const resultTitle = document.getElementById('resultTitle');
+            const resultMessage = document.getElementById('resultMessage');
+            
+            if (isWinner) {
+                resultTitle.textContent = "VITÓRIA!";
+                resultTitle.className = "winner";
+                resultMessage.textContent = "Você completou 3 voltas primeiro!";
+            } else {
+                resultTitle.textContent = "DERROTA!";
+                resultMessage.textContent = "Seu oponente completou 3 voltas primeiro!";
+            }
+            
+            gameScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+            
+            // Fechar conexões
+            if (ws) ws.close();
+            if (peerConnection) peerConnection.close();
+        }
+        
+        // Redimensionar a cena quando a janela for redimensionada
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Loop de animação
+        function animate() {
+            requestAnimationFrame(animate);
+            deltaTime = Math.min(0.1, clock.getDelta());
+            
+            // Atualizar física do carro local
+            if (gameActive) {
+                updatePhysics();
+            }
+            
+            // Renderizar cena
+            renderer.render(scene, camera);
+        }
+        
+        // Iniciar jogo
+        startButton.addEventListener('click', () => {
+            startScreen.classList.add('hidden');
+            modeScreen.classList.remove('hidden');
+        });
+        
+        // Criar sala
+        createRoomBtn.addEventListener('click', () => {
+            gameConfig.gameMode = 'create';
+            gameConfig.roomId = Math.random().toString(36).substr(2, 5).toUpperCase();
+            
+            modeScreen.classList.add('hidden');
+            upgradeScreen.classList.remove('hidden');
+            
+            // Conectar ao servidor para criar sala
+            connectToServer();
+            
+            // Enviar requisição para criar sala
+            ws.send(JSON.stringify({
+                type: 'createRoom',
+                roomId: gameConfig.roomId
+            }));
+        });
+        
+        // Entrar em sala
+        joinRoomBtn.addEventListener('click', () => {
+            roomInput.classList.remove('hidden');
+        });
+        
+        // Confirmar entrada na sala
+        confirmJoinBtn.addEventListener('click', () => {
+            const roomCode = roomCodeInput.value.trim();
+            if (roomCode) {
+                gameConfig.gameMode = 'join';
+                gameConfig.roomId = roomCode;
+                
+                modeScreen.classList.add('hidden');
+                upgradeScreen.classList.remove('hidden');
+                
+                // Conectar ao servidor para entrar na sala
+                connectToServer();
+                
+                // Enviar requisição para entrar na sala
+                ws.send(JSON.stringify({
+                    type: 'joinRoom',
+                    roomId: gameConfig.roomId
+                }));
+            }
+        });
+        
+        // Modo offline
+        offlineBtn.addEventListener('click', () => {
+            gameConfig.gameMode = 'offline';
+            modeScreen.classList.add('hidden');
+            upgradeScreen.classList.remove('hidden');
+            statusDisplay.textContent = "Modo Offline Ativado";
+            gameConfig.connected = false;
+        });
+        
+        // Iniciar corrida após upgrades
+        raceButton.addEventListener('click', () => {
+            upgradeScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            gameActive = true;
+            
+            // Se não for offline, conectar ao servidor
+            if (gameConfig.gameMode !== 'offline') {
+                connectToServer();
+            }
+        });
+        
+        // Jogar novamente
+        playAgainBtn.addEventListener('click', () => {
+            location.reload();
+        });
+        
+        // Comprar upgrades
+        document.querySelectorAll('.buy-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const upgradeType = e.target.dataset.upgrade;
+                const cost = upgradeType === 'torque' ? 100 : upgradeType === 'speed' ? 150 : 200;
+                
+                if (gameConfig.money >= cost) {
+                    gameConfig.money -= cost;
+                    gameConfig.upgrades[upgradeType]++;
+                    e.target.textContent = 'COMPRADO!';
+                    e.target.disabled = true;
+                }
+            });
+        });
+        
+        // Iniciar o jogo quando a página carregar
+        window.addEventListener('load', initGame);
+    </script>
+</body>
+</html>
