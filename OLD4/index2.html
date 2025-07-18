@@ -1,0 +1,2103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Acelera - Corrida Moderna</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            overflow: hidden;
+            background: linear-gradient(135deg, #0a0a1a, #121230);
+            color: #fff;
+            height: 100vh;
+            touch-action: none;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+        }
+
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            display: block;
+        }
+
+        /* Ocultar controles móveis no desktop */
+        #mobileControls {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            #mobileControls {
+                display: flex;
+            }
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(10, 10, 30, 0.95);
+            z-index: 10;
+            transition: opacity 0.5s;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #00eeff;
+            color: #00eeff;
+            letter-spacing: 3px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 30px;
+            color: #ffcc00;
+            font-weight: 600;
+        }
+
+        .screen-title {
+            background: linear-gradient(90deg, #ff3366, #ffcc00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        button {
+            background: linear-gradient(90deg, #ff3366, #ff9900);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(255, 51, 102, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+            min-width: 250px;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 51, 102, 0.7);
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        #carSelection {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            margin: 40px 0;
+            max-width: 1000px;
+        }
+
+        .car-option {
+            background: rgba(30, 30, 60, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            border: 3px solid #00eeff;
+            transition: all 0.3s;
+            width: 280px;
+            cursor: pointer;
+        }
+
+        .car-option.selected {
+            border-color: #ffcc00;
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 204, 0, 0.7);
+        }
+
+        .car-option h3 {
+            color: #ffcc00;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .car-option p {
+            margin-bottom: 15px;
+            color: #aaa;
+        }
+
+        .car-preview {
+            width: 240px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.5);
+            margin: 15px auto;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .stats {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 15px;
+            border: 2px solid #00eeff;
+            z-index: 5;
+            width: 220px;
+            backdrop-filter: blur(5px);
+        }
+
+        .stats div {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .stats-label {
+            color: #aaa;
+        }
+
+        .stats-value {
+            color: #ffcc00;
+            font-weight: bold;
+        }
+
+        #status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 15px;
+            border: 2px solid #00eeff;
+            z-index: 5;
+            font-size: 1.2rem;
+            color: #00eeff;
+            backdrop-filter: blur(5px);
+        }
+
+        .dashboard {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 20px;
+            z-index: 5;
+        }
+
+        .gauge {
+            width: 160px;
+            height: 160px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 50%;
+            border: 3px solid #00eeff;
+            position: relative;
+            backdrop-filter: blur(5px);
+        }
+
+        .gauge-inner {
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            background: rgba(10, 20, 40, 0.9);
+            border-radius: 50%;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .gauge-label {
+            color: #00eeff;
+            font-size: 1.2rem;
+            margin-top: 10px;
+            text-transform: uppercase;
+        }
+
+        .gauge-value {
+            color: white;
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .needle {
+            position: absolute;
+            width: 4px;
+            height: 65px;
+            background: #ff3366;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom;
+            transform: translateX(-50%) rotate(-135deg);
+            border-radius: 2px;
+            transition: transform 0.1s ease-out;
+        }
+
+        .gear-display {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 51, 102, 0.8);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            border: 2px solid #00eeff;
+            margin-top: 10px;
+        }
+
+        #mobileControls {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 5;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .control-btn {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px;
+            color: white;
+            font-size: 1.8rem;
+            border: 2px solid #00eeff;
+            user-select: none;
+            touch-action: manipulation;
+            backdrop-filter: blur(5px);
+        }
+
+        .control-btn:active {
+            background: rgba(0, 238, 255, 0.3);
+            transform: scale(0.95);
+        }
+
+        .gear-controls {
+            flex-direction: row;
+        }
+
+        .gear-btn {
+            width: 70px;
+            height: 70px;
+            margin: 5px;
+            background: rgba(255, 51, 102, 0.7);
+        }
+
+        #dPad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .dpad-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid #00eeff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 1.8rem;
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
+        }
+
+        .dpad-btn:active {
+            background: rgba(0, 238, 255, 0.3);
+        }
+
+        #countdown {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 8rem;
+            color: #ffcc00;
+            text-shadow: 0 0 20px rgba(255, 204, 0, 0.8);
+            z-index: 20;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+        }
+
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            color: white;
+            flex-direction: column;
+        }
+
+        .loader {
+            border: 8px solid rgba(255, 255, 255, 0.1);
+            border-top: 8px solid #00eeff;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 30px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #endGameScreen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(10, 10, 30, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            color: white;
+            z-index: 300;
+            display: none;
+            width: 90%;
+            max-width: 600px;
+            border: 3px solid #00eeff;
+            box-shadow: 0 0 30px rgba(0, 238, 255, 0.5);
+        }
+
+        .podium {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            height: 200px;
+            margin: 30px 0;
+            gap: 20px;
+        }
+
+        .podium-place {
+            width: 120px;
+            background: linear-gradient(180deg, #ffcc00, #ff9900);
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 10px 10px;
+            color: #222;
+            font-weight: bold;
+        }
+
+        .podium-place.first {
+            height: 180px;
+            background: linear-gradient(180deg, #ffd700, #ff9900);
+        }
+
+        .podium-place.second {
+            height: 150px;
+            background: linear-gradient(180deg, #c0c0c0, #999999);
+        }
+
+        .podium-place.third {
+            height: 120px;
+            background: linear-gradient(180deg, #cd7f32, #996633);
+        }
+
+        .player-name {
+            font-size: 1.4rem;
+            margin-top: 10px;
+        }
+
+        .player-time {
+            font-size: 1.2rem;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+            h2 {
+                font-size: 1.5rem;
+            }
+            .stats, #status {
+                font-size: 0.9rem;
+                padding: 10px;
+            }
+            .gauge {
+                width: 120px;
+                height: 120px;
+            }
+            .gauge-inner {
+                width: 100px;
+                height: 100px;
+            }
+            .gauge-value {
+                font-size: 1.8rem;
+            }
+            .control-btn {
+                width: 70px;
+                height: 70px;
+                font-size: 1.5rem;
+            }
+            .dpad-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 1.5rem;
+            }
+            .gear-btn {
+                width: 60px;
+                height: 60px;
+            }
+            #carSelection {
+                flex-direction: column;
+                align-items: center;
+            }
+            .car-option {
+                width: 90%;
+                max-width: 300px;
+            }
+        }
+        
+        /* Efeitos de fumaça */
+        .smoke-particle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+        }
+        
+        /* Mensagem de erro */
+        #errorMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(200, 50, 50, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 100;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="startScreen" class="screen">
+            <h1 class="screen-title">ACELERA</h1>
+            <h2>CORRIDA MODERNA</h2>
+            <div id="instructions">
+                <p>Controles <span style="color:#ffcc00">DESKTOP</span>: Direção WASD | Acelerar: Espaço | Marchas: W/S</p>
+                <p>Controles <span style="color:#ffcc00">MOBILE</span>: Use os controles na parte inferior da tela</p>
+                <p>Objetivo: Complete 3 voltas no circuito antes dos seus oponentes!</p>
+            </div>
+            <input type="text" id="roomInput" placeholder="Digite o ID da sala ou clique em Gerar ID">
+            <div>
+                <button id="generateIdButton">GERAR ID</button>
+                <button id="copyIdButton">COPIAR ID</button>
+            </div>
+            <button id="startButton">INICIAR CORRIDA</button>
+            <button id="offlineButton">JOGAR OFFLINE</button>
+        </div>
+
+        <div id="carSelectionScreen" class="screen hidden">
+            <h1 class="screen-title">ESCOLHA SEU CARRO</h1>
+            <div id="carSelection">
+                <div class="car-option selected" data-car="sport">
+                    <h3>SUPER ESPORTE</h3>
+                    <div class="car-preview" id="carPreview1"></div>
+                    <p>Velocidade máxima: 280 km/h</p>
+                    <p>Aceleração: ⭐⭐⭐⭐⭐</p>
+                </div>
+                <div class="car-option" data-car="muscle">
+                    <h3>MUSCLE CAR</h3>
+                    <div class="car-preview" id="carPreview2"></div>
+                    <p>Velocidade máxima: 220 km/h</p>
+                    <p>Torque: ⭐⭐⭐⭐⭐</p>
+                </div>
+                <div class="car-option" data-car="drift">
+                    <h3>DRIFT CAR</h3>
+                    <div class="car-preview" id="carPreview3"></div>
+                    <p>Velocidade máxima: 240 km/h</p>
+                    <p>Controle: ⭐⭐⭐⭐⭐</p>
+                </div>
+            </div>
+            <button id="selectCarButton">SELECIONAR CARRO</button>
+        </div>
+
+        <div id="gameScreen" class="screen hidden">
+            <canvas id="gameCanvas"></canvas>
+            
+            <div class="stats">
+                <div><span class="stats-label">VOLTA:</span> <span class="stats-value" id="lapCounter">1/3</span></div>
+                <div><span class="stats-label">POSIÇÃO:</span> <span class="stats-value" id="positionDisplay">1°</span></div>
+                <div><span class="stats-label">CARRO:</span> <span class="stats-value" id="carDisplay">Super Esporte</span></div>
+            </div>
+            
+            <div id="status">Conectando...</div>
+            
+            <div class="dashboard">
+                <div class="gauge">
+                    <div class="gauge-inner">
+                        <div class="needle" id="speedNeedle"></div>
+                        <div class="gauge-value" id="speedDisplay">0</div>
+                        <div class="gauge-label">km/h</div>
+                    </div>
+                </div>
+                <div class="gauge">
+                    <div class="gauge-inner">
+                        <div class="needle" id="rpmNeedle"></div>
+                        <div class="gauge-value" id="rpmDisplay">0</div>
+                        <div class="gauge-label">RPM</div>
+                        <div class="gear-display" id="gearDisplay">N</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="mobileControls">
+                <div class="control-group">
+                    <div id="dPad">
+                        <div class="dpad-btn" data-direction="up">↑</div>
+                        <div class="dpad-btn" data-direction="left">←</div>
+                        <div class="dpad-btn" data-direction="down">↓</div>
+                        <div class="dpad-btn" data-direction="right">→</div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <div class="control-btn" id="accelerateBtn">A</div>
+                    <div class="gear-controls">
+                        <div class="control-btn gear-btn" id="gearUpBtn">▲</div>
+                        <div class="control-btn gear-btn" id="gearDownBtn">▼</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="countdown"></div>
+        </div>
+
+        <div id="loadingOverlay" style="display: none;">
+            <div class="loader"></div>
+            <div id="loadingText">Conectando...</div>
+        </div>
+
+        <div id="endGameScreen">
+            <h2 id="endGameMessage">FIM DA CORRIDA!</h2>
+            <div class="podium">
+                <div class="podium-place first">
+                    <div>1°</div>
+                    <div class="player-name" id="firstPlace">Você</div>
+                    <div class="player-time" id="firstTime">00:00:00</div>
+                </div>
+                <div class="podium-place second">
+                    <div>2°</div>
+                    <div class="player-name" id="secondPlace">Oponente</div>
+                    <div class="player-time" id="secondTime">00:00:00</div>
+                </div>
+                <div class="podium-place third">
+                    <div>3°</div>
+                    <div class="player-name" id="thirdPlace">-</div>
+                    <div class="player-time" id="thirdTime">-</div>
+                </div>
+            </div>
+            <button id="rematchBtn">REVANCHE</button>
+            <button id="exitBtn">SAIR</button>
+        </div>
+        
+        <div id="errorMessage"></div>
+    </div>
+
+    <script>
+        // Configurações de carros
+        const carSettings = {
+            'sport': { maxSpeed: 280, acceleration: 1.2, handling: 0.9, color: 0x3366ff, name: 'Super Esporte' },
+            'muscle': { maxSpeed: 220, acceleration: 1.0, handling: 0.7, color: 0xff3366, name: 'Muscle Car' },
+            'drift': { maxSpeed: 240, acceleration: 1.1, handling: 1.1, color: 0x33ff66, name: 'Drift Car' }
+        };
+
+        // Variáveis globais
+        let scene, camera, renderer;
+        let localCar, remoteCar, track, walls = [];
+        let clock = new THREE.Clock();
+        let deltaTime = 0;
+        let players = {};
+        let ws = null;
+        let peerConnection = null;
+        let dataChannel = null;
+        let lastMoveSent = 0;
+        let startTime = null;
+        let finishTimes = {};
+        let countdownActive = false;
+        let countdownValue = 3;
+        let selectedCar = 'sport';
+        let carModels = {};
+        let lastCollisionTime = 0;
+        let collisionCooldown = 1000; // 1 segundo
+
+        // Configurações do jogo
+        const gameConfig = {
+            playerId: null,
+            roomId: null,
+            isOffline: false,
+            status: 'waiting',
+            gear: 'N',
+            speed: 0,
+            acceleration: 0,
+            torque: 0,
+            steering: 0,
+            position: new THREE.Vector3(0, 0.5, 0),
+            rotation: 0,
+            lap: 0,
+            lastCheckpoint: 0,
+            upgrades: {
+                torque: 0,
+                speed: 0,
+                gears: 0
+            },
+            money: 300,
+            carType: 'sport',
+            rpm: 0
+        };
+
+        // Configurações de marchas
+        const gearSettings = {
+            'R': { minSpeed: -20, maxSpeed: 0, optimalMin: -14, optimalMax: -7, torqueMultiplier: 0.7 },
+            'N': { minSpeed: -10, maxSpeed: 10, optimalMin: 0, optimalMax: 0, torqueMultiplier: 0.1 },            
+            '1': { minSpeed: 0, maxSpeed: 50, optimalMin: 16, optimalMax: 20, torqueMultiplier: 1.0 },
+            '2': { minSpeed: 30, maxSpeed: 90, optimalMin: 35, optimalMax: 46, torqueMultiplier: 0.9 },
+            '3': { minSpeed: 60, maxSpeed: 130, optimalMin: 54, optimalMax: 58, torqueMultiplier: 0.8 },
+            '4': { minSpeed: 100, maxSpeed: 170, optimalMin: 70, optimalMax: 78, torqueMultiplier: 0.7 },
+            '5': { minSpeed: 140, maxSpeed: 240, optimalMin: 85, optimalMax: 110, torqueMultiplier: 0.6 }
+        };
+
+        // Configuração WebRTC
+        const rtcConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                {
+                    urls: 'turn:turn.speed.cloudflare.com:50000',
+                    username: 'd1a7f09155fb30285724a3a056ca2edf17956674aff12909ff133dcec42994b2614cdd0a380a1b65124def1e3d0208543050d14b77d1a7533f9da35893ee2ed9',
+                    credential: 'aba9b169546eb6dcc7bfb1cdf34544cf95b5161d602e3b5fa7c8342b2e9802fb'
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:80',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                }
+            ]
+        };
+
+        const SERVER_URL = 'wss://heroic-hope-production-bbdc.up.railway.app';
+
+        // Elementos da interface
+        const startScreen = document.getElementById('startScreen');
+        const carSelectionScreen = document.getElementById('carSelectionScreen');
+        const gameScreen = document.getElementById('gameScreen');
+        const gameCanvas = document.getElementById('gameCanvas');
+        const startButton = document.getElementById('startButton');
+        const offlineButton = document.getElementById('offlineButton');
+        const selectCarButton = document.getElementById('selectCarButton');
+        const generateIdButton = document.getElementById('generateIdButton');
+        const copyIdButton = document.getElementById('copyIdButton');
+        const roomInput = document.getElementById('roomInput');
+        const statusDisplay = document.getElementById('status');
+        const speedDisplay = document.getElementById('speedDisplay');
+        const rpmDisplay = document.getElementById('rpmDisplay');
+        const gearDisplay = document.getElementById('gearDisplay');
+        const lapCounter = document.getElementById('lapCounter');
+        const positionDisplay = document.getElementById('positionDisplay');
+        const carDisplay = document.getElementById('carDisplay');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const endGameScreen = document.getElementById('endGameScreen');
+        const endGameMessage = document.getElementById('endGameMessage');
+        const rematchBtn = document.getElementById('rematchBtn');
+        const exitBtn = document.getElementById('exitBtn');
+        const countdownDisplay = document.getElementById('countdown');
+        const speedNeedle = document.getElementById('speedNeedle');
+        const rpmNeedle = document.getElementById('rpmNeedle');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Elementos de controle mobile
+        const accelerateBtn = document.getElementById('accelerateBtn');
+        const gearUpBtn = document.getElementById('gearUpBtn');
+        const gearDownBtn = document.getElementById('gearDownBtn');
+        const dpadButtons = document.querySelectorAll('.dpad-btn');
+
+        // Sons
+        const sounds = {
+            engine: new Howl({ src: ['https://cdn.pixabay.com/download/audio/2022/03/10/audio_8d45a1d0a3.mp3'], loop: true, volume: 0.5 }),
+            gearShift: new Howl({ src: ['https://cdn.pixabay.com/download/audio/2022/03/19/audio_1d2b4d6e32.mp3'], volume: 0.7 }),
+            skid: new Howl({ src: ['https://cdn.pixabay.com/download/audio/2021/08/04/audio_3f0f5d5d0f.mp3'], volume: 0.6 }),
+            countdown: new Howl({ src: ['https://cdn.pixabay.com/download/audio/2021/08/04/audio_4b8f1d0e3c.mp3'], volume: 0.8 }),
+            go: new Howl({ src: ['https://cdn.pixabay.com/download/audio/2022/03/19/audio_7a1d8d4e86.mp3'], volume: 0.8 }),
+            background: new Howl({ 
+                src: ['https://cdn.pixabay.com/download/audio/2021/10/31/audio_3f4c8a9d4b.mp3'], 
+                loop: true, 
+                volume: 0.4 
+            }),
+            lobby: new Howl({ 
+                src: ['https://cdn.pixabay.com/download/audio/2022/03/19/audio_d0f9a4b2c0.mp3'], 
+                loop: true, 
+                volume: 0.4 
+            }),
+            selection: new Howl({ 
+                src: ['https://cdn.pixabay.com/download/audio/2022/03/19/audio_7a1d8d4e86.mp3'], 
+                loop: true, 
+                volume: 0.4 
+            }),
+            collision: new Howl({ 
+                src: ['https://cdn.pixabay.com/download/audio/2022/03/19/audio_1d2b4d6e32.mp3'], 
+                volume: 0.8 
+            })
+        };
+
+        // Inicializar o jogo
+        function initGame() {
+            try {
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x111133);
+                scene.fog = new THREE.Fog(0x111133, 100, 500);
+
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.set(0, 15, -20);
+                camera.lookAt(0, 0, 0);
+
+                renderer = new THREE.WebGLRenderer({ 
+                    canvas: gameCanvas,
+                    antialias: true,
+                    alpha: true
+                });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                scene.add(ambientLight);
+
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(50, 50, 50);
+                directionalLight.castShadow = true;
+                directionalLight.shadow.mapSize.width = 1024;
+                directionalLight.shadow.mapSize.height = 1024;
+                scene.add(directionalLight);
+
+                createTrack();
+                createLocalCar();
+                
+                if (!gameConfig.isOffline) {
+                    createRemoteCar();
+                } else {
+                    createCpuCar();
+                }
+
+                setupControls();
+                animate();
+                window.addEventListener('resize', onWindowResize);
+                
+                // Tocar música de fundo
+                sounds.background.play();
+                
+                // Atualizar dashboard
+                updateDashboard(0, 0);
+                
+            } catch (error) {
+                showError(`Erro ao iniciar o jogo: ${error.message}`);
+            }
+        }
+
+        // Criar pista de corrida (circuito complexo)
+        function createTrack() {
+            const trackGroup = new THREE.Group();
+
+            // Criar grama
+            const grassGeometry = new THREE.PlaneGeometry(2000, 2000, 100, 100);
+            const grassMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x228822,
+                roughness: 1,
+                metalness: 0
+            });
+            const grass = new THREE.Mesh(grassGeometry, grassMaterial);
+            grass.rotation.x = -Math.PI / 2;
+            grass.position.y = -0.1;
+            grass.receiveShadow = true;
+            trackGroup.add(grass);
+
+            // Criar pista
+            const trackShape = new THREE.Shape();
+            trackShape.moveTo(-100, 0);
+            trackShape.bezierCurveTo(-150, 50, -150, 150, -100, 200);
+            trackShape.bezierCurveTo(-50, 250, 50, 250, 100, 200);
+            trackShape.bezierCurveTo(150, 150, 150, 50, 100, 0);
+            trackShape.bezierCurveTo(50, -50, -50, -50, -100, 0);
+
+            const extrudeSettings = {
+                steps: 2,
+                depth: 1,
+                bevelEnabled: false
+            };
+
+            const trackGeometry = new THREE.ExtrudeGeometry(trackShape, extrudeSettings);
+            const trackMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x333333,
+                roughness: 0.9,
+                metalness: 0.1
+            });
+            const trackMesh = new THREE.Mesh(trackGeometry, trackMaterial);
+            trackMesh.rotation.x = Math.PI / 2;
+            trackMesh.position.y = 0.1;
+            trackMesh.receiveShadow = true;
+            trackGroup.add(trackMesh);
+
+            // Linhas da pista
+            const lineMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            for (let i = 0; i < 36; i++) {
+                const angle = (i / 36) * Math.PI * 2;
+                const radius = 100 + Math.sin(angle * 3) * 30;
+                const x = Math.cos(angle) * radius;
+                const z = Math.sin(angle) * radius;
+                
+                const line = new THREE.Mesh(
+                    new THREE.BoxGeometry(1, 0.1, 3),
+                    lineMaterial
+                );
+                line.position.set(x, 0.11, z);
+                line.rotation.y = -angle;
+                line.receiveShadow = true;
+                trackGroup.add(line);
+            }
+
+            // Criar paredes ao redor da pista
+            const wallGeometry = new THREE.BoxGeometry(1, 2, 1);
+            const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xcc0000 });
+            
+            // Pontos ao longo da pista para colocar paredes
+            const wallPoints = [];
+            for (let i = 0; i < 100; i++) {
+                const t = i / 100;
+                const angle = t * Math.PI * 2;
+                const radius = 100 + Math.sin(angle * 3) * 30;
+                wallPoints.push({
+                    x: Math.cos(angle) * (radius + 15),
+                    z: Math.sin(angle) * (radius + 15),
+                    rotation: angle
+                });
+                wallPoints.push({
+                    x: Math.cos(angle) * (radius - 15),
+                    z: Math.sin(angle) * (radius - 15),
+                    rotation: angle + Math.PI
+                });
+            }
+            
+            walls = [];
+            wallPoints.forEach(point => {
+                const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+                wall.position.set(point.x, 1, point.z);
+                wall.rotation.y = point.rotation;
+                wall.castShadow = true;
+                wall.receiveShadow = true;
+                trackGroup.add(wall);
+                walls.push(wall);
+            });
+
+            // Árvores e decorações
+            const treeGeometry = new THREE.ConeGeometry(5, 15, 8);
+            const treeMaterial = new THREE.MeshStandardMaterial({ color: 0x228833 });
+            for (let i = 0; i < 50; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 200 + Math.random() * 100;
+                const tree = new THREE.Mesh(treeGeometry, treeMaterial);
+                tree.position.set(
+                    Math.cos(angle) * distance,
+                    7.5,
+                    Math.sin(angle) * distance
+                );
+                tree.castShadow = true;
+                trackGroup.add(tree);
+            }
+
+            scene.add(trackGroup);
+            track = trackGroup;
+        }
+
+        // Criar carro local
+        function createLocalCar() {
+            const carGroup = new THREE.Group();
+
+            const carConfig = carSettings[gameConfig.carType];
+            const bodyColor = carConfig.color;
+
+            // Carroceria
+            const bodyGeometry = new THREE.BoxGeometry(3, 1.2, 5);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ color: bodyColor });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.6;
+            body.castShadow = true;
+            carGroup.add(body);
+
+            // Capô
+            const hoodGeometry = new THREE.BoxGeometry(2.8, 0.6, 2.5);
+            const hoodMaterial = new THREE.MeshStandardMaterial({ color: bodyColor });
+            const hood = new THREE.Mesh(hoodGeometry, hoodMaterial);
+            hood.position.set(0, 0.9, 1.2);
+            hood.castShadow = true;
+            carGroup.add(hood);
+
+            // Rodas
+            const wheelGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.8, 16);
+            wheelGeometry.rotateZ(Math.PI / 2);
+            const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+
+            const wheelPositions = [
+                { x: -1.5, y: 0.5, z: 2 },
+                { x: 1.5, y: 0.5, z: 2 },
+                { x: -1.5, y: 0.5, z: -2 },
+                { x: 1.5, y: 0.5, z: -2 }
+            ];
+
+            const wheels = [];
+            wheelPositions.forEach(pos => {
+                const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                wheel.position.set(pos.x, pos.y, pos.z);
+                wheel.castShadow = true;
+                carGroup.add(wheel);
+                wheels.push(wheel);
+            });
+
+            // Faróis
+            const lightGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+            const lightMaterial = new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0xffff00 });
+
+            const frontLight1 = new THREE.Mesh(lightGeometry, lightMaterial);
+            frontLight1.position.set(-0.8, 0.8, 2.5);
+            carGroup.add(frontLight1);
+
+            const frontLight2 = new THREE.Mesh(lightGeometry, lightMaterial);
+            frontLight2.position.set(0.8, 0.8, 2.5);
+            carGroup.add(frontLight2);
+
+            scene.add(carGroup);
+            localCar = {
+                group: carGroup,
+                wheels: wheels,
+                position: new THREE.Vector3(0, 0.5, 0),
+                rotation: 0,
+                targetRotation: 0,
+                speed: 0,
+                color: bodyColor
+            };
+
+            localCar.group.position.copy(localCar.position);
+            players[gameConfig.playerId] = {
+                x: localCar.position.x,
+                z: localCar.position.z,
+                rotation: localCar.rotation
+            };
+        }
+
+        // Criar carro remoto
+        function createRemoteCar() {
+            const carGroup = new THREE.Group();
+
+            // Carroceria
+            const bodyGeometry = new THREE.BoxGeometry(3, 1.2, 5);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xff3366 });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.6;
+            body.castShadow = true;
+            carGroup.add(body);
+
+            // Capô
+            const hoodGeometry = new THREE.BoxGeometry(2.8, 0.6, 2.5);
+            const hoodMaterial = new THREE.MeshStandardMaterial({ color: 0xcc2244 });
+            const hood = new THREE.Mesh(hoodGeometry, hoodMaterial);
+            hood.position.set(0, 0.9, 1.2);
+            hood.castShadow = true;
+            carGroup.add(hood);
+
+            // Rodas
+            const wheelGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.8, 16);
+            wheelGeometry.rotateZ(Math.PI / 2);
+            const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+
+            const wheelPositions = [
+                { x: -1.5, y: 0.5, z: 2 },
+                { x: 1.5, y: 0.5, z: 2 },
+                { x: -1.5, y: 0.5, z: -2 },
+                { x: 1.5, y: 0.5, z: -2 }
+            ];
+
+            const wheels = [];
+            wheelPositions.forEach(pos => {
+                const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                wheel.position.set(pos.x, pos.y, pos.z);
+                wheel.castShadow = true;
+                carGroup.add(wheel);
+                wheels.push(wheel);
+            });
+
+            scene.add(carGroup);
+            remoteCar = {
+                group: carGroup,
+                wheels: wheels,
+                position: new THREE.Vector3(-10, 0.5, 0),
+                rotation: 0,
+                speed: 0
+            };
+
+            remoteCar.group.position.copy(remoteCar.position);
+            const opponentId = gameConfig.playerId === 0 ? 1 : 0;
+            players[opponentId] = {
+                x: remoteCar.position.x,
+                z: remoteCar.position.z,
+                rotation: remoteCar.rotation
+            };
+        }
+
+        // Criar carro CPU para modo offline
+        function createCpuCar() {
+            const carGroup = new THREE.Group();
+
+            // Carroceria
+            const bodyGeometry = new THREE.BoxGeometry(3, 1.2, 5);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x33ff66 });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.6;
+            body.castShadow = true;
+            carGroup.add(body);
+
+            // Capô
+            const hoodGeometry = new THREE.BoxGeometry(2.8, 0.6, 2.5);
+            const hoodMaterial = new THREE.MeshStandardMaterial({ color: 0x22cc55 });
+            const hood = new THREE.Mesh(hoodGeometry, hoodMaterial);
+            hood.position.set(0, 0.9, 1.2);
+            hood.castShadow = true;
+            carGroup.add(hood);
+
+            // Rodas
+            const wheelGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.8, 16);
+            wheelGeometry.rotateZ(Math.PI / 2);
+            const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+
+            const wheelPositions = [
+                { x: -1.5, y: 0.5, z: 2 },
+                { x: 1.5, y: 0.5, z: 2 },
+                { x: -1.5, y: 0.5, z: -2 },
+                { x: 1.5, y: 0.5, z: -2 }
+            ];
+
+            const wheels = [];
+            wheelPositions.forEach(pos => {
+                const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                wheel.position.set(pos.x, pos.y, pos.z);
+                wheel.castShadow = true;
+                carGroup.add(wheel);
+                wheels.push(wheel);
+            });
+
+            scene.add(carGroup);
+            remoteCar = {
+                group: carGroup,
+                wheels: wheels,
+                position: new THREE.Vector3(-10, 0.5, 0),
+                rotation: 0,
+                speed: 0
+            };
+
+            players['cpu'] = {
+                x: remoteCar.position.x,
+                z: remoteCar.position.z,
+                rotation: remoteCar.rotation,
+                lap: 0
+            };
+        }
+
+        // Configurar controles
+        function setupControls() {
+            const keys = {};
+
+            window.addEventListener('keydown', (e) => {
+                keys[e.code] = true;
+                // CORREÇÃO: Usar W e S para trocar marchas
+                if (e.code === 'KeyW') shiftGearUp();
+                if (e.code === 'KeyS') shiftGearDown();
+            });
+
+            window.addEventListener('keyup', (e) => {
+                keys[e.code] = false;
+            });
+
+            accelerateBtn.addEventListener('touchstart', () => {
+                keys['Space'] = true;
+                accelerateBtn.style.background = 'rgba(0, 238, 255, 0.3)';
+            });
+
+            accelerateBtn.addEventListener('touchend', () => {
+                keys['Space'] = false;
+                accelerateBtn.style.background = 'rgba(255, 255, 255, 0.15)';
+            });
+
+            dpadButtons.forEach(btn => {
+                btn.addEventListener('touchstart', (e) => {
+                    const direction = e.target.dataset.direction;
+                    keys[`Arrow${direction.charAt(0).toUpperCase() + direction.slice(1)}`] = true;
+                    btn.style.background = 'rgba(0, 238, 255, 0.3)';
+                });
+
+                btn.addEventListener('touchend', (e) => {
+                    const direction = e.target.dataset.direction;
+                    keys[`Arrow${direction.charAt(0).toUpperCase() + direction.slice(1)}`] = false;
+                    btn.style.background = 'rgba(255, 255, 255, 0.15)';
+                });
+            });
+
+            gearUpBtn.addEventListener('click', shiftGearUp);
+            gearDownBtn.addEventListener('click', shiftGearDown);
+
+            function updateControls() {
+                gameConfig.acceleration = keys['Space'] ? 1 : 0;
+                if (keys['ArrowDown']) gameConfig.acceleration = -0.5;
+
+                gameConfig.steering = 0;
+                if (keys['ArrowLeft']) gameConfig.steering = 1;
+                if (keys['ArrowRight']) gameConfig.steering = -1;
+
+                updatePhysics();
+            }
+
+            setInterval(updateControls, 16);
+        }
+
+        // Gerar ID de sala
+        function generateRoomId() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let id = '';
+            for (let i = 0; i < 5; i++) {
+                id += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return id;
+        }
+
+        // Conectar ao servidor WebSocket
+        function connectToServer() {
+            if (!gameConfig.roomId) {
+                statusDisplay.textContent = 'Por favor, insira um ID de sala';
+                return;
+            }
+
+            statusDisplay.textContent = 'Conectando ao servidor...';
+            loadingOverlay.style.display = 'flex';
+
+            ws = new WebSocket(SERVER_URL);
+
+            ws.onopen = () => {
+                statusDisplay.textContent = 'Aguardando oponente...';
+                ws.send(JSON.stringify({ 
+                    type: 'join', 
+                    roomId: gameConfig.roomId 
+                }));
+            };
+
+            ws.onerror = (error) => {
+                showError(`Erro na conexão: ${error.message}`);
+                loadingOverlay.style.display = 'none';
+            };
+
+            ws.onclose = () => {
+                statusDisplay.textContent = 'Conexão fechada.';
+                loadingOverlay.style.display = 'none';
+                gameConfig.status = 'waiting';
+            };
+
+            ws.onmessage = async (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'start') {
+                        gameConfig.playerId = data.playerId;
+                        statusDisplay.textContent = `Você é o jogador ${gameConfig.playerId + 1}`;
+                        initPeerConnection();
+                        if (gameConfig.playerId === 0) {
+                            dataChannel = peerConnection.createDataChannel('gameData');
+                            setupDataChannel();
+                            const offer = await peerConnection.createOffer();
+                            await peerConnection.setLocalDescription(offer);
+                            ws.send(JSON.stringify({ type: 'offer', sdp: offer }));
+                        }
+                    } else if (data.type === 'offer') {
+                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                        const answer = await peerConnection.createAnswer();
+                        await peerConnection.setLocalDescription(answer);
+                        ws.send(JSON.stringify({ type: 'answer', sdp: answer }));
+                    } else if (data.type === 'answer') {
+                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                    } else if (data.type === 'ice') {
+                        await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                    } else if (data.type === 'error') {
+                        showError(data.message);
+                        loadingOverlay.style.display = 'none';
+                    }
+                } catch (error) {
+                    showError(`Erro ao processar mensagem: ${error.message}`);
+                    loadingOverlay.style.display = 'none';
+                }
+            };
+        }
+
+        // Configurar WebRTC
+        function initPeerConnection() {
+            peerConnection = new RTCPeerConnection(rtcConfig);
+
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    ws.send(JSON.stringify({ type: 'ice', candidate: event.candidate }));
+                }
+            };
+
+            peerConnection.oniceconnectionstatechange = () => {
+                const state = peerConnection.iceConnectionState;
+                statusDisplay.textContent = `Estado: ${state}`;
+                if (state === 'failed') {
+                    showError('Conexão falhou. Tente novamente.');
+                    loadingOverlay.style.display = 'none';
+                }
+            };
+
+            peerConnection.ondatachannel = (event) => {
+                dataChannel = event.channel;
+                setupDataChannel();
+            };
+        }
+
+        // Configurar canal de dados
+        function setupDataChannel() {
+            dataChannel.onopen = () => {
+                statusDisplay.textContent = 'Conexão P2P estabelecida!';
+                startCountdown();
+            };
+
+            dataChannel.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'move') {
+                        const opponentId = gameConfig.playerId === 0 ? 1 : 0;
+                        if (players[opponentId] && remoteCar) {
+                            players[opponentId].x = data.position.x;
+                            players[opponentId].z = data.position.z;
+                            players[opponentId].rotation = data.position.rotation;
+                            remoteCar.position.set(data.position.x, 0.5, data.position.z);
+                            remoteCar.group.position.copy(remoteCar.position);
+                            remoteCar.rotation = data.position.rotation;
+                            remoteCar.group.rotation.y = data.position.rotation;
+                            const wheelRotation = data.speed * deltaTime * 2;
+                            remoteCar.wheels.forEach(wheel => {
+                                wheel.rotation.x += wheelRotation;
+                            });
+                            if (data.speed > 30 && Math.random() < 0.3) {
+                                createSmoke(data.position.x, data.position.z, data.position.rotation, 0xff3366);
+                            }
+                        }
+                    } else if (data.type === 'lap') {
+                        const opponentId = gameConfig.playerId === 0 ? 1 : 0;
+                        players[opponentId].lap = data.lapCount;
+                        if (data.lapCount >= 3 && !gameConfig.status.includes('finished')) {
+                            finishTimes[opponentId] = Date.now() - startTime;
+                            gameConfig.status = 'opponent_finished';
+                            showEndGameScreen(`Jogador ${parseInt(opponentId) + 1} venceu!`);
+                        }
+                    } else if (data.type === 'restart') {
+                        restartGame();
+                    } else if (data.type === 'countdown') {
+                        if (!countdownActive) {
+                            startCountdown();
+                        }
+                    }
+                } catch (error) {
+                    showError(`Erro no canal de dados: ${error.message}`);
+                }
+            };
+        }
+
+        // Iniciar contagem regressiva
+        function startCountdown() {
+            countdownActive = true;
+            countdownValue = 3;
+            countdownDisplay.textContent = countdownValue;
+            countdownDisplay.style.display = 'block';
+            sounds.countdown.play();
+            
+            const countdownInterval = setInterval(() => {
+                countdownValue--;
+                if (countdownValue > 0) {
+                    countdownDisplay.textContent = countdownValue;
+                    sounds.countdown.play();
+                } else {
+                    countdownDisplay.textContent = 'GO!';
+                    sounds.go.play();
+                    setTimeout(() => {
+                        countdownDisplay.style.display = 'none';
+                        countdownActive = false;
+                        startGame();
+                    }, 1000);
+                    clearInterval(countdownInterval);
+                }
+            }, 1000);
+        }
+
+        // Iniciar jogo
+        function startGame() {
+            players = {};
+            gameConfig.lap = 0;
+            gameConfig.status = 'playing';
+            startTime = Date.now();
+            finishTimes = {};
+            gameConfig.speed = 0;
+            gameConfig.rpm = 0;
+            gameConfig.gear = '1';
+
+            players[gameConfig.playerId] = {
+                x: 0,
+                z: 0,
+                rotation: 0,
+                lap: 0,
+                lastCheckpoint: 0
+            };
+
+            localCar.position.set(0, 0.5, 0);
+            localCar.rotation = 0;
+            localCar.targetRotation = 0;
+            localCar.group.position.copy(localCar.position);
+            localCar.group.rotation.y = localCar.rotation;
+
+            if (!gameConfig.isOffline) {
+                const opponentId = gameConfig.playerId === 0 ? 1 : 0;
+                players[opponentId] = {
+                    x: -10,
+                    z: 0,
+                    rotation: 0,
+                    lap: 0
+                };
+                remoteCar.position.set(-10, 0.5, 0);
+                remoteCar.rotation = 0;
+                remoteCar.group.position.copy(remoteCar.position);
+                remoteCar.group.rotation.y = remoteCar.rotation;
+            } else {
+                players['cpu'] = {
+                    x: -10,
+                    z: 0,
+                    rotation: 0,
+                    lap: 0
+                };
+            }
+
+            gameScreen.classList.remove('hidden');
+            if (loadingOverlay) loadingOverlay.style.display = 'none';
+            if (gameCanvas) gameCanvas.style.display = 'block';
+            lapCounter.textContent = 'VOLTA: 1/3';
+            positionDisplay.textContent = 'POSIÇÃO: 1°';
+            carDisplay.textContent = carSettings[gameConfig.carType].name;
+            updateDashboard(0, 0);
+            endGameScreen.style.display = 'none';
+            sounds.background.play();
+            sounds.lobby.stop();
+        }
+
+        // Reiniciar jogo
+        function restartGame() {
+            gameConfig.lap = 0;
+            gameConfig.status = 'playing';
+            startTime = Date.now();
+            finishTimes = {};
+            gameConfig.speed = 0;
+            gameConfig.rpm = 0;
+            gameConfig.gear = '1';
+
+            players[gameConfig.playerId] = {
+                x: 0,
+                z: 0,
+                rotation: 0,
+                lap: 0,
+                lastCheckpoint: 0
+            };
+
+            localCar.position.set(0, 0.5, 0);
+            localCar.rotation = 0;
+            localCar.targetRotation = 0;
+            localCar.group.position.copy(localCar.position);
+            localCar.group.rotation.y = localCar.rotation;
+
+            if (!gameConfig.isOffline) {
+                const opponentId = gameConfig.playerId === 0 ? 1 : 0;
+                players[opponentId] = {
+                    x: -10,
+                    z: 0,
+                    rotation: 0,
+                    lap: 0
+                };
+                remoteCar.position.set(-10, 0.5, 0);
+                remoteCar.rotation = 0;
+                remoteCar.group.position.copy(remoteCar.position);
+                remoteCar.group.rotation.y = remoteCar.rotation;
+            } else {
+                players['cpu'] = {
+                    x: -10,
+                    z: 0,
+                    rotation: 0,
+                    lap: 0
+                };
+            }
+
+            gameScreen.classList.remove('hidden');
+            if (loadingOverlay) loadingOverlay.style.display = 'none';
+            if (gameCanvas) gameCanvas.style.display = 'block';
+            lapCounter.textContent = 'VOLTA: 1/3';
+            positionDisplay.textContent = 'POSIÇÃO: 1°';
+            updateDashboard(0, 0);
+            endGameScreen.style.display = 'none';
+            sounds.background.play();
+        }
+
+        // Atualizar física do carro
+        function updatePhysics() {
+            try {
+                const gear = gearSettings[gameConfig.gear];
+                const speed = Math.abs(gameConfig.speed);
+                const carSetting = carSettings[gameConfig.carType];
+
+                // Calcular torque baseado na velocidade e faixa ideal
+                let torqueEfficiency = 0.1;
+                if (gameConfig.gear === 'N') {
+                    torqueEfficiency = gear.torqueMultiplier;
+                } else {
+                    if (speed >= gear.optimalMin && speed <= gear.optimalMax) {
+                        torqueEfficiency = gear.torqueMultiplier;
+                    } else {
+                        const distance = Math.min(
+                            Math.abs(speed - gear.optimalMin),
+                            Math.abs(speed - gear.optimalMax)
+                        );
+                        torqueEfficiency = gear.torqueMultiplier * Math.max(0.1, 1 - (distance / 10));
+                    }
+                }
+
+                // Calcular aceleração
+                let acceleration = gameConfig.acceleration * torqueEfficiency * carSetting.acceleration;
+                if (gameConfig.gear === 'N') {
+                    acceleration *= 0.1; // Reduzir aceleração em neutro
+                }
+
+                // Atualizar velocidade
+                gameConfig.speed += acceleration * deltaTime * 20;
+                if (gameConfig.gear === 'R') {
+                    gameConfig.speed = Math.max(-gear.maxSpeed, Math.min(0, gameConfig.speed));
+                } else if (gameConfig.gear === 'N') {
+                    gameConfig.speed *= 0.95;
+                } else {
+                    gameConfig.speed = Math.max(0, Math.min(carSetting.maxSpeed, gameConfig.speed));
+                }
+
+                // Aplicar arrasto
+                gameConfig.speed *= 0.999;
+
+                // Atualizar RPM para exibição
+                const maxRpm = 8000;
+                let rpmRatio = speed / carSetting.maxSpeed;
+                if (gameConfig.gear === 'R') rpmRatio = Math.abs(gameConfig.speed) / 20;
+                gameConfig.rpm = Math.min(maxRpm, 1000 + rpmRatio * 7000);
+
+                // Atualizar direção
+                const steeringAmount = gameConfig.steering * deltaTime * 1.5 * carSetting.handling;
+                if (Math.abs(gameConfig.speed) > 5) {
+                    localCar.targetRotation += steeringAmount * Math.sign(gameConfig.speed);
+                }
+
+                localCar.rotation += (localCar.targetRotation - localCar.rotation) * 0.1;
+
+                // Verificar colisões com paredes
+                checkWallCollisions();
+
+                // Verificar se está fora da pista (grama)
+                checkOffTrack();
+
+                // Atualizar posição
+                const direction = new THREE.Vector3(
+                    Math.sin(localCar.rotation),
+                    0,
+                    Math.cos(localCar.rotation)
+                );
+
+                localCar.position.add(direction.multiplyScalar(gameConfig.speed * deltaTime));
+                players[gameConfig.playerId].x = localCar.position.x;
+                players[gameConfig.playerId].z = localCar.position.z;
+                players[gameConfig.playerId].rotation = localCar.rotation;
+
+                checkLapCompletion();
+
+                localCar.group.position.copy(localCar.position);
+                localCar.group.rotation.y = localCar.rotation;
+
+                const wheelRotation = gameConfig.speed * deltaTime * 2;
+                localCar.wheels.forEach(wheel => {
+                    wheel.rotation.x += wheelRotation;
+                });
+
+                if (gameConfig.acceleration > 0 && gameConfig.speed > 30 && Math.random() < 0.2) {
+                    createSmoke(localCar.position.x, localCar.position.z, localCar.rotation, localCar.color);
+                }
+
+                // Atualizar som do motor
+                updateEngineSound();
+
+                updateCamera();
+                updateDashboard(Math.abs(Math.round(gameConfig.speed)), Math.round(gameConfig.rpm));
+
+                // Atualizar CPU se offline
+                if (gameConfig.isOffline) {
+                    updateCpuCar();
+                }
+
+                const now = Date.now();
+                if (now - lastMoveSent > 50 && dataChannel && dataChannel.readyState === 'open') {
+                    dataChannel.send(JSON.stringify({ 
+                        type: 'move', 
+                        playerId: gameConfig.playerId, 
+                        position: {
+                            x: localCar.position.x,
+                            z: localCar.position.z,
+                            rotation: localCar.rotation
+                        },
+                        speed: gameConfig.speed,
+                        lapCount: gameConfig.lap
+                    }));
+                    lastMoveSent = now;
+                }
+            } catch (error) {
+                showError(`Erro na física: ${error.message}`);
+            }
+        }
+
+        // Verificar colisões com paredes
+        function checkWallCollisions() {
+            const now = Date.now();
+            if (now - lastCollisionTime < collisionCooldown) return;
+            
+            const carRadius = 2;
+            for (let i = 0; i < walls.length; i++) {
+                const wall = walls[i];
+                const dx = localCar.position.x - wall.position.x;
+                const dz = localCar.position.z - wall.position.z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                
+                if (distance < carRadius + 0.5) {
+                    // Colisão elástica
+                    const angle = Math.atan2(dz, dx);
+                    const impactSpeed = Math.abs(gameConfig.speed);
+                    
+                    // Calcular novo vetor de velocidade
+                    const newSpeedX = impactSpeed * Math.sin(angle);
+                    const newSpeedZ = impactSpeed * Math.cos(angle);
+                    
+                    // Aplicar a nova velocidade com perda de energia
+                    gameConfig.speed = (newSpeedX + newSpeedZ) * 0.7;
+                    
+                    // Mover o carro para fora da parede
+                    const overlap = (carRadius + 0.5) - distance;
+                    localCar.position.x += Math.cos(angle) * overlap;
+                    localCar.position.z += Math.sin(angle) * overlap;
+                    
+                    // Tocar som de colisão
+                    sounds.collision.play();
+                    
+                    // Criar efeito de fumaça
+                    createSmoke(localCar.position.x, localCar.position.z, angle, 0xffffff);
+                    
+                    lastCollisionTime = now;
+                    break;
+                }
+            }
+        }
+
+        // Verificar se está fora da pista
+        function checkOffTrack() {
+            const distanceFromCenter = Math.sqrt(localCar.position.x * localCar.position.x + localCar.position.z * localCar.position.z);
+            const isOnTrack = distanceFromCenter > 70 && distanceFromCenter < 130;
+            
+            if (!isOnTrack) {
+                // Aplicar mais atrito na grama
+                gameConfig.speed *= 0.97;
+                
+                // Criar efeito de derrapagem
+                if (Math.abs(gameConfig.speed) > 30 && Math.random() < 0.2) {
+                    createSmoke(localCar.position.x, localCar.position.z, localCar.rotation, 0xffffff);
+                    if (!sounds.skid.playing()) {
+                        sounds.skid.play();
+                    }
+                }
+            }
+        }
+
+        // Atualizar carro CPU
+        function updateCpuCar() {
+            const cpu = players['cpu'];
+            
+            // Lógica básica de IA
+            const targetX = Math.cos(Date.now() * 0.001) * 100;
+            const targetZ = Math.sin(Date.now() * 0.001) * 100;
+            
+            const dx = targetX - cpu.x;
+            const dz = targetZ - cpu.z;
+            const distance = Math.sqrt(dx * dx + dz * dz);
+            
+            if (distance > 10) {
+                const targetAngle = Math.atan2(dz, dx);
+                cpu.rotation = targetAngle;
+                cpu.x += Math.cos(targetAngle) * 0.3;
+                cpu.z += Math.sin(targetAngle) * 0.3;
+                
+                remoteCar.position.set(cpu.x, 0.5, cpu.z);
+                remoteCar.group.position.copy(remoteCar.position);
+                remoteCar.group.rotation.y = cpu.rotation;
+                
+                // Verificar colisões do CPU com paredes
+                const carRadius = 2;
+                for (let i = 0; i < walls.length; i++) {
+                    const wall = walls[i];
+                    const dx = cpu.x - wall.position.x;
+                    const dz = cpu.z - wall.position.z;
+                    const distance = Math.sqrt(dx * dx + dz * dz);
+                    
+                    if (distance < carRadius + 0.5) {
+                        const angle = Math.atan2(dz, dx);
+                        cpu.x += Math.cos(angle) * 0.5;
+                        cpu.z += Math.sin(angle) * 0.5;
+                        remoteCar.position.set(cpu.x, 0.5, cpu.z);
+                        remoteCar.group.position.copy(remoteCar.position);
+                        break;
+                    }
+                }
+            }
+            
+            // Verificar se CPU completou volta
+            if (cpu.z > -5 && cpu.z < 5 && cpu.x > -5 && cpu.x < 5) {
+                cpu.lap = Math.min(3, cpu.lap + 1);
+                if (cpu.lap >= 3 && !gameConfig.status.includes('finished')) {
+                    finishTimes['cpu'] = Date.now() - startTime;
+                    gameConfig.status = 'opponent_finished';
+                    showEndGameScreen('CPU venceu!');
+                }
+            }
+        }
+
+        // Atualizar som do motor
+        function updateEngineSound() {
+            const rpmRatio = gameConfig.rpm / 8000;
+            const pitch = 0.5 + rpmRatio * 0.8;
+            sounds.engine.rate(pitch);
+            
+            if (!sounds.engine.playing() && gameConfig.acceleration > 0) {
+                sounds.engine.play();
+            } else if (sounds.engine.playing() && gameConfig.acceleration === 0 && gameConfig.speed < 10) {
+                sounds.engine.stop();
+            }
+        }
+
+        // Verificar se completou uma volta
+        function checkLapCompletion() {
+            if (localCar.position.z > -5 && localCar.position.z < 5 && localCar.position.x > -5 && localCar.position.x < 5) {
+                if (gameConfig.lastCheckpoint === 1) {
+                    gameConfig.lap++;
+                    gameConfig.lastCheckpoint = 0;
+                    lapCounter.textContent = `VOLTA: ${gameConfig.lap}/3`;
+                    players[gameConfig.playerId].lap = gameConfig.lap;
+
+                    if (dataChannel && dataChannel.readyState === 'open') {
+                        dataChannel.send(JSON.stringify({ 
+                            type: 'lap', 
+                            playerId: gameConfig.playerId,
+                            lapCount: gameConfig.lap
+                        }));
+                    }
+
+                    if (gameConfig.lap >= 3 && !gameConfig.status.includes('finished')) {
+                        finishTimes[gameConfig.playerId] = Date.now() - startTime;
+                        gameConfig.status = 'finished';
+                        showEndGameScreen('Você venceu!');
+                        if (dataChannel && dataChannel.readyState === 'open') {
+                            dataChannel.send(JSON.stringify({ 
+                                type: 'raceOver', 
+                                winnerId: gameConfig.playerId
+                            }));
+                        }
+                    }
+                }
+            } else if (localCar.position.z > 150) {
+                gameConfig.lastCheckpoint = 1;
+            }
+        }
+
+        // Atualizar posição da câmera
+        function updateCamera() {
+            const carPosition = localCar.position.clone();
+            const offset = new THREE.Vector3(
+                Math.sin(localCar.rotation) * 15,
+                5,
+                Math.cos(localCar.rotation) * 15
+            );
+
+            camera.position.copy(carPosition.sub(offset));
+            camera.lookAt(localCar.position.x, localCar.position.y + 2, localCar.position.z);
+        }
+
+        // Atualizar painel de instrumentos
+        function updateDashboard(speed, rpm) {
+            speedDisplay.textContent = speed;
+            rpmDisplay.textContent = rpm;
+            gearDisplay.textContent = gameConfig.gear;
+            
+            // Atualizar ponteiros
+            const speedAngle = (speed / 280) * 270 - 135;
+            const rpmAngle = (rpm / 8000) * 270 - 135;
+            
+            speedNeedle.style.transform = `translateX(-50%) rotate(${speedAngle}deg)`;
+            rpmNeedle.style.transform = `translateX(-50%) rotate(${rpmAngle}deg)`;
+            
+            positionDisplay.textContent = `POSIÇÃO: ${calculatePosition()}°`;
+        }
+
+        // Calcular posição na corrida
+        function calculatePosition() {
+            const opponentId = gameConfig.isOffline ? 'cpu' : (gameConfig.playerId === 0 ? 1 : 0);
+            const playerLaps = gameConfig.lap;
+            const opponentLaps = players[opponentId]?.lap || 0;
+            if (playerLaps > opponentLaps) return 1;
+            if (playerLaps < opponentLaps) return 2;
+            return 1; // Empate se número de voltas for igual
+        }
+
+        // Criar efeito de fumaça
+        function createSmoke(x, z, rotation, color) {
+            const smoke = document.createElement('div');
+            smoke.className = 'smoke-particle';
+            smoke.style.left = `${50 + (x / 4)}%`;
+            smoke.style.top = `${50 - (z / 4)}%`;
+            smoke.style.backgroundColor = `rgba(${(color >> 16) & 0xff}, ${(color >> 8) & 0xff}, ${color & 0xff}, 0.7)`;
+            document.getElementById('gameContainer').appendChild(smoke);
+
+            let size = 10;
+            let opacity = 0.7;
+            const angle = rotation + Math.PI + (Math.random() - 0.5) * 0.5;
+            const speed = 1 + Math.random() * 2;
+
+            const animateSmoke = () => {
+                size += 0.5;
+                opacity -= 0.01;
+
+                if (opacity <= 0) {
+                    smoke.remove();
+                    return;
+                }
+
+                smoke.style.width = `${size}px`;
+                smoke.style.height = `${size}px`;
+                smoke.style.opacity = opacity;
+                smoke.style.transform = `translate(${Math.cos(angle) * speed}px, ${Math.sin(angle) * speed}px)`;
+
+                requestAnimationFrame(animateSmoke);
+            };
+
+            animateSmoke();
+        }
+
+        // Trocar marcha para cima
+        function shiftGearUp() {
+            const gears = ['R', 'N', '1', '2', '3', '4', '5'];
+            const currentIndex = gears.indexOf(gameConfig.gear);
+            if (currentIndex < gears.length - 1) {
+                gameConfig.gear = gears[currentIndex + 1];
+                sounds.gearShift.play();
+            }
+        }
+
+        // Trocar marcha para baixo
+        function shiftGearDown() {
+            const gears = ['R', 'N', '1', '2', '3', '4', '5'];
+            const currentIndex = gears.indexOf(gameConfig.gear);
+            if (currentIndex > 0) {
+                gameConfig.gear = gears[currentIndex - 1];
+                sounds.gearShift.play();
+            }
+        }
+
+        // Redimensionar a cena
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Exibir tela de fim de jogo
+        function showEndGameScreen(message) {
+            sounds.background.stop();
+            endGameScreen.style.display = 'block';
+            endGameMessage.textContent = message;
+
+            // Calcular resultados
+            const playerTime = (finishTimes[gameConfig.playerId] / 1000).toFixed(2);
+            const opponentId = gameConfig.isOffline ? 'cpu' : (gameConfig.playerId === 0 ? 1 : 0);
+            const opponentTime = finishTimes[opponentId] ? (finishTimes[opponentId] / 1000).toFixed(2) : '-';
+            
+            document.getElementById('firstPlace').textContent = 'Você';
+            document.getElementById('firstTime').textContent = `${playerTime}s`;
+            document.getElementById('secondPlace').textContent = gameConfig.isOffline ? 'CPU' : 'Oponente';
+            document.getElementById('secondTime').textContent = `${opponentTime}s`;
+            document.getElementById('thirdPlace').textContent = '-';
+            document.getElementById('thirdTime').textContent = '-';
+            
+            gameConfig.status = 'finished';
+        }
+
+        // Fechar conexões
+        function closeConnections() {
+            if (dataChannel) {
+                dataChannel.close();
+                dataChannel = null;
+            }
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        // Loop de animação
+        function animate() {
+            requestAnimationFrame(animate);
+            deltaTime = Math.min(clock.getDelta(), 0.1); // Limitar deltaTime para evitar problemas físicos
+
+            if (gameConfig.status === 'playing') {
+                updatePhysics();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Inicializar modelos de carros para seleção
+        function initCarPreviews() {
+            const previews = document.querySelectorAll('.car-preview');
+            previews.forEach(preview => {
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, 240/150, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer({ alpha: true });
+                renderer.setSize(240, 150);
+                preview.appendChild(renderer.domElement);
+                
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(1, 1, 1);
+                scene.add(directionalLight);
+                
+                // Modelo de carro simplificado
+                const carType = preview.parentElement.dataset.car;
+                const color = carSettings[carType].color;
+                
+                const bodyGeometry = new THREE.BoxGeometry(2, 0.8, 4);
+                const bodyMaterial = new THREE.MeshStandardMaterial({ color: color });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                scene.add(body);
+                
+                const wheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.6, 16);
+                wheelGeometry.rotateZ(Math.PI / 2);
+                const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+                
+                const wheels = [];
+                const wheelPositions = [
+                    { x: -1, y: -0.4, z: 1.5 },
+                    { x: 1, y: -0.4, z: 1.5 },
+                    { x: -1, y: -0.4, z: -1.5 },
+                    { x: 1, y: -0.4, z: -1.5 }
+                ];
+                
+                wheelPositions.forEach(pos => {
+                    const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                    wheel.position.set(pos.x, pos.y, pos.z);
+                    scene.add(wheel);
+                    wheels.push(wheel);
+                });
+                
+                camera.position.set(0, 2, 6);
+                camera.lookAt(0, 0, 0);
+                
+                // Animação de rotação
+                const animatePreview = () => {
+                    requestAnimationFrame(animatePreview);
+                    body.rotation.y += 0.01;
+                    wheels.forEach(wheel => {
+                        wheel.rotation.x += 0.05;
+                    });
+                    renderer.render(scene, camera);
+                };
+                
+                animatePreview();
+            });
+        }
+
+        // Mostrar mensagem de erro
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        // Eventos de interface
+        generateIdButton.addEventListener('click', () => {
+            gameConfig.roomId = generateRoomId();
+            roomInput.value = gameConfig.roomId;
+            statusDisplay.textContent = 'ID gerado!';
+        });
+
+        copyIdButton.addEventListener('click', () => {
+            roomInput.select();
+            document.execCommand('copy');
+            statusDisplay.textContent = 'ID copiado!';
+        });
+
+        startButton.addEventListener('click', () => {
+            gameConfig.isOffline = false;
+            gameConfig.roomId = roomInput.value.trim();
+            if (!gameConfig.roomId) {
+                statusDisplay.textContent = 'Por favor, insira ou gere um ID de sala';
+                return;
+            }
+            connectToServer();
+            startScreen.classList.add('hidden');
+            carSelectionScreen.classList.remove('hidden');
+            sounds.lobby.stop();
+            sounds.selection.play();
+            initCarPreviews();
+        });
+
+        offlineButton.addEventListener('click', () => {
+            gameConfig.isOffline = true;
+            startScreen.classList.add('hidden');
+            carSelectionScreen.classList.remove('hidden');
+            statusDisplay.textContent = 'Modo Offline';
+            sounds.lobby.stop();
+            sounds.selection.play();
+            initCarPreviews();
+        });
+
+        // Seleção de carro
+        document.querySelectorAll('.car-option').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.car-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                option.classList.add('selected');
+                selectedCar = option.dataset.car;
+            });
+        });
+
+        selectCarButton.addEventListener('click', () => {
+            gameConfig.carType = selectedCar;
+            carSelectionScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            initGame();
+        });
+
+        rematchBtn.addEventListener('click', () => {
+            if (dataChannel && dataChannel.readyState === 'open') {
+                dataChannel.send(JSON.stringify({ type: 'restart' }));
+                restartGame();
+            } else {
+                statusDisplay.textContent = 'Reiniciando...';
+                restartGame();
+            }
+        });
+
+        exitBtn.addEventListener('click', () => {
+            closeConnections();
+            gameConfig.status = 'waiting';
+            endGameScreen.style.display = 'none';
+            startScreen.classList.remove('hidden');
+            statusDisplay.textContent = 'Pronto para jogar novamente';
+            sounds.background.stop();
+            sounds.lobby.play();
+        });
+
+        window.addEventListener('load', () => {
+            sounds.lobby.play();
+            // Garante que o canvas não fique escondido por overlay ao carregar
+            if (loadingOverlay) loadingOverlay.style.display = 'none';
+            if (gameCanvas) gameCanvas.style.display = 'block';
+        });
+    </script>
+</body>
+</html>
