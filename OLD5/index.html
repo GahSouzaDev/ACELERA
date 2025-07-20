@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🏁 Corrida Arcade Ultra - Single File</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background: #0a0a0a;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.5s ease;
+            transform: translateX(-100%);
+        }
+
+        .screen.active {
+            transform: translateX(0);
+        }
+
+        .game-title {
+            font-size: 3rem;
+            text-align: center;
+            background: linear-gradient(45deg, #00ffea, #ff3366);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 2rem;
+        }
+
+        .menu-btn {
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            background: #1a1a2e;
+            border: 2px solid #00ffea;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 0.5rem;
+            min-width: 200px;
+        }
+
+        .menu-btn:hover {
+            background: #00ffea;
+            color: #0a0a0a;
+            transform: scale(1.05);
+        }
+
+        .car-showcase, .track-showcase {
+            display: flex;
+            gap: 2rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .car-card, .track-card {
+            background: #1a1a2e;
+            padding: 2rem;
+            border: 2px solid #00ffea;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            width: 200px;
+        }
+
+        .car-card:hover, .track-card:hover, .selected {
+            transform: scale(1.05);
+            border-color: #ff3366;
+            background: #2a2a4e;
+        }
+
+        .hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0,0,0,0.7);
+            padding: 1rem;
+            border-radius: 10px;
+        }
+
+        .speedometer {
+            width: 100px;
+            height: 100px;
+            border: 3px solid #00ffea;
+            border-radius: 50%;
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .speed-needle {
+            position: absolute;
+            width: 2px;
+            height: 40px;
+            background: #ff3366;
+            bottom: 50px;
+            left: 50%;
+            transform-origin: bottom;
+            transform: translateX(-50%) rotate(0deg);
+            transition: transform 0.1s;
+        }
+
+        .speed-value {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.2rem;
+        }
+
+        #mobileControls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            background: #1a1a2e;
+            border: 2px solid #00ffea;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:active {
+            background: #00ffea;
+            transform: scale(0.9);
+        }
+
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .loading-content {
+            text-align: center;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #1a1a2e;
+            border-top: 4px solid #00ffea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .countdown-number {
+            font-size: 8rem;
+            font-weight: bold;
+            color: #00ffea;
+            animation: pulse 1s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        #moneyDisplay {
+            font-size: 1.5rem;
+            color: #ffcc00;
+            margin-bottom: 1rem;
+        }
+
+        .upgrades {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .upgrade {
+            background: #1a1a2e;
+            padding: 1rem;
+            border: 1px solid #00ffea;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .upgrade button {
+            background: #ff3366;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            margin-top: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .game-title { font-size: 2rem; }
+            .car-card, .track-card { width: 150px; font-size: 0.9rem; }
+            .control-btn { width: 50px; height: 50px; font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Telas do Jogo -->
+    <div id="loadingScreen" class="screen active">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <h1 class="game-title">🏁 CORRIDA ARCADE ULTRA</h1>
+            <p>Carregando...</p>
+        </div>
+    </div>
+
+    <div id="mainMenu" class="screen">
+        <h1 class="game-title">🏎️ CORRIDA ARCADE ULTRA</h1>
+        <button class="menu-btn" onclick="showScreen('selectMode')">🎮 JOGAR</button>
+        <button class="menu-btn" onclick="showScreen('garage')">🔧 GARAGEM</button>
+    </div>
+
+    <div id="selectMode" class="screen">
+        <h2>Selecione o Modo</h2>
+        <button class="menu-btn" onclick="startOffline()">👤 OFFLINE</button>
+        <button class="menu-btn" onclick="showScreen('multiplayer')">👥 MULTIPLAYER</button>
+        <button class="menu-btn" onclick="showScreen('mainMenu')">⬅️ VOLTAR</button>
+    </div>
+
+    <div id="multiplayer" class="screen">
+        <h2>🏁 MULTIPLAYER</h2>
+        <input type="text" id="roomCode" placeholder="Código da Sala" maxlength="5" style="padding: 0.5rem; margin: 1rem;">
+        <button class="menu-btn" onclick="generateRoom()">🎲 GERAR CÓDIGO</button>
+        <button class="menu-btn" onclick="joinRoom()">✅ ENTRAR</button>
+        <button class="menu-btn" onclick="showScreen('selectMode')">⬅️ VOLTAR</button>
+    </div>
+
+    <div id="carSelection" class="screen">
+        <h2>🏎️ SELECIONE SEU CARRO</h2>
+        <div class="car-showcase">
+            <div class="car-card" data-car="car1">
+                <h3>🚗 Fusca Turbo</h3>
+                <p>Velocidade: 80%</p>
+                <p>Aceleração: 90%</p>
+            </div>
+            <div class="car-card" data-car="car2">
+                <h3>🏎️ GT500</h3>
+                <p>Velocidade: 95%</p>
+                <p>Aceleração: 85%</p>
+            </div>
+        </div>
+        <button class="menu-btn" onclick="confirmCar()">✅ CONFIRMAR</button>
+    </div>
+
+    <div id="trackSelection" class="screen">
+        <h2>🏁 SELECIONE A PISTA</h2>
+        <div class="track-showcase">
+            <div class="track-card" data-track="pista1">
+                <h3>🏎️ Circuito Oval</h3>
+                <p>3 voltas | Fácil</p>
+            </div>
+            <div class="track-card" data-track="pista2">
+                <h3>🏞️ Circuito Técnico</h3>
+                <p>2 voltas | Difícil</p>
+            </div>
+        </div>
+        <button class="menu-btn" onclick="confirmTrack()">✅ CONFIRMAR</button>
+    </div>
+
+    <div id="shop" class="screen">
+        <h2>🔧 LOJA DE UPGRADES</h2>
+        <div id="moneyDisplay">💰 $300</div>
+        <div class="upgrades">
+            <div class="upgrade">
+                <h3>⚡ Motor Turbo</h3>
+                <p>+20% potência</p>
+                <button onclick="buyUpgrade('engine', 100)">💸 $100</button>
+            </div>
+            <div class="upgrade">
+                <h3>🛞 Pneus de Corrida</h3>
+                <p>+15% aderência</p>
+                <button onclick="buyUpgrade('tires', 80)">💸 $80</button>
+            </div>
+        </div>
+        <button class="menu-btn" onclick="startCountdown()">🏁 INICIAR CORRIDA</button>
+    </div>
+
+    <div id="countdown" class="screen">
+        <div class="countdown-number">3</div>
+    </div>
+
+    <div id="gameScreen" class="screen">
+        <canvas id="gameCanvas"></canvas>
+        <div class="hud">
+            <div class="speedometer">
+                <div class="speed-needle" id="speedNeedle"></div>
+                <div class="speed-value" id="speedValue">0</div>
+            </div>
+            <div class="gear-display" id="gearDisplay">N</div>
+            <div class="lap-counter" id="lapCounter">Volta: 0/3</div>
+        </div>
+        <div id="mobileControls">
+            <button class="control-btn" id="accelBtn" ontouchstart="keyStates.accelerate=true" ontouchend="keyStates.accelerate=false">⬆️</button>
+            <button class="control-btn" id="brakeBtn" ontouchstart="keyStates.brake=true" ontouchend="keyStates.brake=false">⬇️</button>
+            <button class="control-btn" id="leftBtn" ontouchstart="keyStates.left=true" ontouchend="keyStates.left=false">⬅️</button>
+            <button class="control-btn" id="rightBtn" ontouchstart="keyStates.right=true" ontouchend="keyStates.right=false">➡️</button>
+            <button class="control-btn" onclick="changeGear(1)">+</button>
+            <button class="control-btn" onclick="changeGear(-1)">-</button>
+        </div>
+    </div>
+
+    <div id="endGameScreen" class="screen">
+        <h2 id="resultTitle">🏆 RESULTADO</h2>
+        <div id="raceStats"></div>
+        <button class="menu-btn" onclick="restartGame()">🔄 REVANCHE</button>
+        <button class="menu-btn" onclick="showScreen('mainMenu')">🏠 MENU</button>
+    </div>
+
+    <script>
+        // ===== VARIÁVEIS GLOBAIS =====
+        let gameState = {
+            currentScreen: 'loading',
+            selectedCar: null,
+            selectedTrack: null,
+            player: { money: 300, upgrades: { engine: 0, tires: 0 } },
+            gameMode: null,
+            roomId: null,
+            lap: 0,
+            totalLaps: 3
+        };
+
+        let scene, camera, renderer, car, carPhysics = { velocity: 0, rotation: 0, gear: 0 };
+        let keyStates = { accelerate: false, brake: false, left: false, right: false };
+
+        // ===== NAVEGAÇÃO =====
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            gameState.currentScreen = screenId;
+        }
+
+        // ===== INICIALIZAÇÃO =====
+        setTimeout(() => showScreen('mainMenu'), 2000);
+
+        // ===== SELEÇÃO =====
+        let selectedCarCard = null, selectedTrackCard = null;
+
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.car-card')) {
+                if (selectedCarCard) selectedCarCard.classList.remove('selected');
+                selectedCarCard = e.target.closest('.car-card');
+                selectedCarCard.classList.add('selected');
+                gameState.selectedCar = selectedCarCard.dataset.car;
+            }
+            if (e.target.closest('.track-card')) {
+                if (selectedTrackCard) selectedTrackCard.classList.remove('selected');
+                selectedTrackCard = e.target.closest('.track-card');
+                selectedTrackCard.classList.add('selected');
+                gameState.selectedTrack = selectedTrackCard.dataset.track;
+                gameState.totalLaps = gameState.selectedTrack === 'pista1' ? 3 : 2;
+            }
+        });
+
+        // ===== FUNÇÕES DE NAVEGAÇÃO =====
+        function confirmCar() {
+            if (!gameState.selectedCar) return alert('Selecione um carro!');
+            showScreen('trackSelection');
+        }
+
+        function confirmTrack() {
+            if (!gameState.selectedTrack) return alert('Selecione uma pista!');
+            showScreen('shop');
+        }
+
+        function buyUpgrade(type, cost) {
+            if (gameState.player.money >= cost) {
+                gameState.player.money -= cost;
+                gameState.player.upgrades[type]++;
+                document.getElementById('moneyDisplay').textContent = `💰 $${gameState.player.money}`;
+                event.target.disabled = true;
+                event.target.textContent = '✅ COMPRADO';
+            }
+        }
+
+        function startOffline() {
+            gameState.gameMode = 'offline';
+            showScreen('carSelection');
+        }
+
+        function generateRoom() {
+            gameState.roomId = Math.random().toString(36).substring(2, 7).toUpperCase();
+            document.getElementById('roomCode').value = gameState.roomId;
+            alert(`Sala criada: ${gameState.roomId}\nAgora você pode compartilhar este código!`);
+            showScreen('carSelection');
+        }
+
+        function joinRoom() {
+            const code = document.getElementById('roomCode').value;
+            if (!code) return alert('Digite um código!');
+            gameState.roomId = code;
+            showScreen('carSelection');
+        }
+
+        // ===== COUNTDOWN =====
+        function startCountdown() {
+            showScreen('countdown');
+            let count = 3;
+            const countdownEl = document.querySelector('.countdown-number');
+            const interval = setInterval(() => {
+                countdownEl.textContent = count;
+                count--;
+                if (count < 0) {
+                    clearInterval(interval);
+                    startRace();
+                }
+            }, 1000);
+        }
+
+        // ===== THREE.JS =====
+        function startRace() {
+            showScreen('gameScreen');
+            initThreeJS();
+            initControls();
+            gameLoop();
+        }
+
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x001122);
+            
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+            
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas') });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            // Luz
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const light = new THREE.DirectionalLight(0xffffff, 0.8);
+            light.position.set(10, 10, 5);
+            scene.add(light);
+            
+            // Pista
+            const trackGeometry = new THREE.RingGeometry(80, 120, 64);
+            const trackMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 });
+            const track = new THREE.Mesh(trackGeometry, trackMaterial);
+            track.rotation.x = -Math.PI/2;
+            scene.add(track);
+            
+            // Carro
+            const carGeometry = new THREE.BoxGeometry(2, 1, 4);
+            const carMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+            car = new THREE.Mesh(carGeometry, carMaterial);
+            car.position.set(100, 1, 0);
+            scene.add(car);
+            
+            camera.position.set(100, 10, -20);
+            camera.lookAt(car.position);
+        }
+
+        // ===== CONTROLES =====
+        function initControls() {
+            document.addEventListener('keydown', (e) => {
+                switch(e.code) {
+                    case 'Space': keyStates.accelerate = true; break;
+                    case 'KeyS': keyStates.brake = true; break;
+                    case 'KeyA': keyStates.left = true; break;
+                    case 'KeyD': keyStates.right = true; break;
+                    case 'KeyW': changeGear(1); break;
+                    case 'KeyX': changeGear(-1); break;
+                }
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                switch(e.code) {
+                    case 'Space': keyStates.accelerate = false; break;
+                    case 'KeyS': keyStates.brake = false; break;
+                    case 'KeyA': keyStates.left = false; break;
+                    case 'KeyD': keyStates.right = false; break;
+                }
+            });
+        }
+
+        function changeGear(direction) {
+            carPhysics.gear = Math.max(-1, Math.min(5, carPhysics.gear + direction));
+            document.getElementById('gearDisplay').textContent = carPhysics.gear === 0 ? 'N' : 
+                carPhysics.gear === -1 ? 'R' : carPhysics.gear;
+        }
+
+        // ===== GAME LOOP =====
+        function gameLoop() {
+            if (gameState.currentScreen !== 'gameScreen') return;
+            
+            requestAnimationFrame(gameLoop);
+            
+            // Física
+            const acceleration = gameState.selectedCar === 'car1' ? 0.9 : 0.95;
+            const maxSpeed = gameState.selectedCar === 'car1' ? 180 : 220;
+            const speedMultiplier = 1 + gameState.player.upgrades.engine * 0.2;
+            
+            if (keyStates.accelerate) {
+                carPhysics.velocity = Math.min(carPhysics.velocity + acceleration, maxSpeed * speedMultiplier);
+            } else if (keyStates.brake) {
+                carPhysics.velocity = Math.max(carPhysics.velocity - 2, 0);
+            } else {
+                carPhysics.velocity *= 0.98;
+            }
+            
+            if (keyStates.left) carPhysics.rotation += 0.05;
+            if (keyStates.right) carPhysics.rotation -= 0.05;
+            
+            // Movimento
+            car.position.x += Math.sin(carPhysics.rotation) * carPhysics.velocity * 0.01;
+            car.position.z += Math.cos(carPhysics.rotation) * carPhysics.velocity * 0.01;
+            car.rotation.y = carPhysics.rotation;
+            
+            // Limites da pista
+            const distance = Math.sqrt(car.position.x**2 + car.position.z**2);
+            if (distance > 120 || distance < 80) {
+                carPhysics.velocity *= 0.5;
+            }
+            
+            // Câmera
+            camera.position.x = car.position.x - Math.sin(carPhysics.rotation) * 15;
+            camera.position.z = car.position.z - Math.cos(carPhysics.rotation) * 15;
+            camera.position.y = 10;
+            camera.lookAt(car.position);
+            
+            // HUD
+            document.getElementById('speedValue').textContent = Math.round(carPhysics.velocity);
+            document.getElementById('speedNeedle').style.transform = 
+                `translateX(-50%) rotate(${carPhysics.velocity * 2}deg)`;
+            
+            // Voltas
+            if (car.position.x > 95 && car.position.x < 105 && car.position.z > -5 && car.position.z < 5) {
+                gameState.lap++;
+                document.getElementById('lapCounter').textContent = `Volta: ${gameState.lap}/${gameState.totalLaps}`;
+                
+                if (gameState.lap >= gameState.totalLaps) {
+                    endGame();
+                }
+            }
+        }
+
+        // ===== FIM DE JOGO =====
+        function endGame() {
+            document.getElementById('raceStats').innerHTML = `
+                <p>Tempo: ${Math.floor(Math.random()*60+30)}s</p>
+                <p>Melhor volta: ${Math.floor(Math.random()*20+10)}s</p>
+            `;
+            showScreen('endGameScreen');
+        }
+
+        function restartGame() {
+            gameState.lap = 0;
+            car.position.set(100, 1, 0);
+            carPhysics = { velocity: 0, rotation: 0, gear: 0 };
+            startCountdown();
+        }
+    </script>
+</body>
+</html>
