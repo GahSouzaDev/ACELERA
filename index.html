@@ -113,29 +113,77 @@
             margin-bottom: 10px;
         }
 
-        .stats {
+        .dashboard {
             position: absolute;
-            top: 20px;
-            left: 20px;
+            bottom: 20px;
+            right: 20px;
+            width: 220px;
+            height: 220px;
             background: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            border-radius: 10px;
-            border: 2px solid #00ffea;
+            border-radius: 50%;
+            border: 3px solid #00ffea;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             z-index: 5;
         }
 
-        .stats div {
-            margin: 5px 0;
+        .rpm-gauge {
+            position: relative;
+            width: 180px;
+            height: 180px;
         }
 
-        #speedDisplay {
-            font-size: 1.8rem;
+        .rpm-needle {
+            position: absolute;
+            width: 3px;
+            height: 85px;
+            background: #ff3366;
+            top: 50%;
+            left: 50%;
+            transform-origin: bottom center;
+            transform: translate(-50%, -100%) rotate(-135deg);
+            transition: transform 0.1s;
+            z-index: 2;
+        }
+
+        .rpm-tick {
+            position: absolute;
+            width: 2px;
+            height: 10px;
+            background: #fff;
+            top: 0;
+            left: 50%;
+            transform-origin: bottom center;
+            transform: translateX(-50%);
+        }
+
+        .rpm-label {
+            position: absolute;
+            color: #fff;
+            font-size: 12px;
+            transform: translate(-50%, -50%);
+        }
+
+        .speed-display {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
             color: #ffcc00;
+            z-index: 3;
         }
 
-        #gearDisplay {
-            font-size: 1.5rem;
+        .gear-display {
+            position: absolute;
+            top: 75%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.8rem;
             color: #ff3366;
+            z-index: 3;
         }
 
         #status {
@@ -151,30 +199,17 @@
             color: #00ffea;
         }
 
-        .torque-bar {
-            width: 250px;
-            height: 30px;
-            background: #333;
-            border: 2px solid #00ffea;
-            border-radius: 15px;
-            margin-top: 10px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .torque-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #ff0000, #ffcc00, #00ff00);
-            width: 0%;
-            transition: width 0.1s;
-        }
-
-        .torque-optimal {
+        .player-name {
             position: absolute;
-            height: 100%;
-            width: 4px;
-            background: #00ffea;
-            left: 70%;
+            top: 3px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 2px 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            z-index: 4;
         }
 
         #mobileControls {
@@ -239,17 +274,19 @@
             margin-top: 10px;
         }
 
-        #dPad {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            gap: 5px;
-            margin-top: 10px;
+        .dpad-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .dpad-row {
+            display: flex;
         }
 
         .dpad-btn {
-            width: 50px;
-            height: 50px;
+            width: 60px;
+            height: 60px;
             background: rgba(255, 255, 255, 0.2);
             border: 2px solid #00ffea;
             display: flex;
@@ -257,40 +294,7 @@
             align-items: center;
             color: white;
             font-size: 1.5rem;
-        }
-
-        .dpad-btn:nth-child(1) {
-            grid-column: 2;
-            grid-row: 1;
-        }
-
-        .dpad-btn:nth-child(2) {
-            grid-column: 1;
-            grid-row: 2;
-        }
-
-        .dpad-btn:nth-child(3) {
-            grid-column: 2;
-            grid-row: 2;
-        }
-
-        .dpad-btn:nth-child(4) {
-            grid-column: 3;
-            grid-row: 2;
-        }
-
-        .dpad-btn:nth-child(5) {
-            grid-column: 2;
-            grid-row: 3;
-        }
-
-        .smoke-particle {
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            background: rgba(255, 255, 255, 0.7);
-            border-radius: 50%;
-            pointer-events: none;
+            margin: 5px;
         }
 
         #instructions {
@@ -320,14 +324,16 @@
             100% { transform: scale(1); }
         }
 
-        #roomInput {
-            padding: 10px;
+        #playerNameInput, #roomInput {
+            padding: 12px;
             margin: 10px;
             font-size: 1rem;
-            border-radius: 5px;
+            border-radius: 30px;
             border: 2px solid #00ffea;
             background: rgba(30, 30, 60, 0.8);
             color: white;
+            width: 300px;
+            text-align: center;
         }
 
         #loadingOverlay {
@@ -376,6 +382,54 @@
             max-width: 500px;
         }
 
+        .car-selector {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .car-option {
+            margin: 0 15px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            padding: 10px;
+            transition: all 0.3s;
+        }
+
+        .car-option:hover, .car-option.selected {
+            border-color: #00ffea;
+            transform: scale(1.05);
+        }
+
+        .car-option img {
+            width: 100px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+
+        .bet-amount {
+            margin: 15px 0;
+            font-size: 1.2rem;
+        }
+
+        .bet-controls {
+            display: flex;
+            justify-content: center;
+            margin: 10px 0;
+        }
+
+        .bet-btn {
+            width: 40px;
+            height: 40px;
+            margin: 0 10px;
+            padding: 0;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 2.5rem;
@@ -383,17 +437,36 @@
             h2 {
                 font-size: 1.5rem;
             }
-            .stats, #status {
+            #status {
                 font-size: 0.9rem;
                 padding: 10px;
             }
-            #speedDisplay {
+            .dashboard {
+                width: 150px;
+                height: 150px;
+                bottom: 100px;
+            }
+            .rpm-gauge {
+                width: 120px;
+                height: 120px;
+            }
+            .rpm-needle {
+                height: 60px;
+            }
+            .speed-display {
                 font-size: 1.4rem;
             }
             .control-btn {
                 width: 60px;
                 height: 60px;
                 font-size: 1.2rem;
+            }
+            .dpad-btn {
+                width: 50px;
+                height: 50px;
+            }
+            #playerNameInput, #roomInput {
+                width: 250px;
             }
         }
     </style>
@@ -404,10 +477,11 @@
             <h1>CORRIDA ARCADE</h1>
             <h2>MULTIPLAYER 3D</h2>
             <div id="instructions">
-                <p>Controles <span class="highlight">DESKTOP</span>: Direção WASD ou Setas | Acelerar: Espaço | Marchas: W/S</p>
+                <p>Controles <span class="highlight">DESKTOP</span>: Direção A/D | Acelerar: Espaço | Marchas: W/S</p>
                 <p>Controles <span class="highlight">MOBILE</span>: Use os controles na parte inferior da tela</p>
-                <p>Objetivo: Complete 3 voltas na pista oval antes do seu oponente!</p>
+                <p>Objetivo: Complete 3 voltas na pista antes do seu oponente!</p>
             </div>
+            <input type="text" id="playerNameInput" placeholder="Digite seu nome" maxlength="15">
             <input type="text" id="roomInput" placeholder="Digite o ID da sala ou clique em Gerar ID">
             <div>
                 <button id="generateIdButton" class="pulse">GERAR ID</button>
@@ -438,47 +512,48 @@
                 <p>Custo: $200</p>
                 <button class="buy-button" data-upgrade="gears">COMPRAR</button>
             </div>
+            <div class="bet-amount">
+                Aposta: $<span id="betValue">0</span>
+            </div>
+            <div class="bet-controls">
+                <button class="bet-btn" id="betDecrease">-</button>
+                <button class="bet-btn" id="betIncrease">+</button>
+            </div>
             <button id="raceButton">INICIAR CORRIDA</button>
         </div>
 
         <div id="gameScreen" class="screen hidden">
             <canvas id="gameCanvas"></canvas>
             
-            <div class="stats">
-                <div>VELOCIDADE: <span id="speedDisplay">0</span> km/h</div>
-                <div>MARCHA: <span id="gearDisplay">N</span></div>
-                <div>TORQUE:</div>
-                <div class="torque-bar">
-                    <div class="torque-fill"></div>
-                    <div class="torque-optimal"></div>
+            <div class="dashboard">
+                <div class="player-name" id="playerNameTag">Player</div>
+                <div class="rpm-gauge">
+                    <div class="rpm-needle" id="rpmNeedle"></div>
+                    <div class="speed-display" id="speedDisplay">0</div>
+                    <div class="gear-display" id="gearDisplay">N</div>
                 </div>
-                <div id="lapCounter">VOLTA: 0/3</div>
-                <div id="positionDisplay">POSIÇÃO: 1°</div>
             </div>
             
             <div id="status">Pronto para conectar...</div>
             
             <div id="mobileControls">
                 <div class="control-group">
-                    <div class="control-btn" id="accelerateBtn">A</div>
-                    <div class="control-btn" id="brakeBtn">F</div>
+                    <div class="control-btn" id="gearUpBtn">↑</div>
+                    <div class="control-btn" id="gearDownBtn">↓</div>
                 </div>
                 
                 <div class="control-group">
-                    <div id="dPad">
-                        <div class="dpad-btn">↑</div>
-                        <div class="dpad-btn">←</div>
-                        <div class="dpad-btn">↓</div>
-                        <div class="dpad-btn">→</div>
+                    <div class="dpad-container">
+                        <div class="dpad-row">
+                            <div class="dpad-btn" id="dpadLeft">←</div>
+                            <div class="dpad-btn" id="dpadRight">→</div>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="control-group">
-                    <div class="gear-controls">
-                        <div class="control-btn gear-btn" id="gearUpBtn">+</div>
-                        <div class="control-btn gear-btn" id="gearDownBtn">-</div>
-                    </div>
-                    <div class="gear-display" id="mobileGearDisplay">N</div>
+                    <div class="control-btn accelerate-btn" id="accelerateBtn">A</div>
+                    <div class="control-btn brake-btn" id="brakeBtn">F</div>
                 </div>
             </div>
         </div>
@@ -496,11 +571,483 @@
         </div>
     </div>
 
+    <!-- Car models -->
+    <script id="carModels">
+        // Car Model 1: Basic Sports Car
+        const carModel1 = {
+            name: "Esportivo Básico",
+            color: 0x3366ff,
+            acceleration: 0.15,
+            maxSpeed: 220,
+            torqueMultiplier: 1.0,
+            createModel: function() {
+                const carGroup = new THREE.Group();
+
+                // Car body
+                const bodyGeometry = new THREE.BoxGeometry(3, 1, 5);
+                const bodyMaterial = new THREE.MeshStandardMaterial({ color: this.color });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                body.position.y = 0.5;
+                body.castShadow = true;
+                carGroup.add(body);
+
+                // Hood
+                const hoodGeometry = new THREE.BoxGeometry(2.8, 0.5, 2);
+                const hoodMaterial = new THREE.MeshStandardMaterial({ color: 0x2244cc });
+                const hood = new THREE.Mesh(hoodGeometry, hoodMaterial);
+                hood.position.set(0, 0.75, 1);
+                hood.castShadow = true;
+                carGroup.add(hood);
+
+                // Wheels
+                const wheelGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.8, 16);
+                wheelGeometry.rotateZ(Math.PI / 2);
+                const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+
+                const wheelPositions = [
+                    { x: -1.5, y: 0.5, z: 2 },
+                    { x: 1.5, y: 0.5, z: 2 },
+                    { x: -1.5, y: 0.5, z: -2 },
+                    { x: 1.5, y: 0.5, z: -2 }
+                ];
+
+                this.wheels = [];
+                wheelPositions.forEach(pos => {
+                    const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                    wheel.position.set(pos.x, pos.y, pos.z);
+                    wheel.castShadow = true;
+                    carGroup.add(wheel);
+                    this.wheels.push(wheel);
+                });
+
+                // Lights
+                const lightGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+                const lightMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0xffff00, 
+                    emissive: 0xffff00 
+                });
+
+                const frontLight1 = new THREE.Mesh(lightGeometry, lightMaterial);
+                frontLight1.position.set(-0.8, 0.7, 2.5);
+                carGroup.add(frontLight1);
+
+                const frontLight2 = new THREE.Mesh(lightGeometry, lightMaterial);
+                frontLight2.position.set(0.8, 0.7, 2.5);
+                carGroup.add(frontLight2);
+
+                return carGroup;
+            }
+        };
+
+        // Car Model 2: Muscle Car
+        const carModel2 = {
+            name: "Muscle Car",
+            color: 0xff5500,
+            acceleration: 0.18,
+            maxSpeed: 200,
+            torqueMultiplier: 1.2,
+            createModel: function() {
+                const carGroup = new THREE.Group();
+
+                // Car body
+                const bodyGeometry = new THREE.BoxGeometry(3.2, 1.1, 5.5);
+                const bodyMaterial = new THREE.MeshStandardMaterial({ color: this.color });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                body.position.y = 0.5;
+                body.castShadow = true;
+                carGroup.add(body);
+
+                // Hood
+                const hoodGeometry = new THREE.BoxGeometry(3, 0.6, 2.2);
+                const hoodMaterial = new THREE.MeshStandardMaterial({ color: 0xcc4400 });
+                const hood = new THREE.Mesh(hoodGeometry, hoodMaterial);
+                hood.position.set(0, 0.8, 1.2);
+                hood.castShadow = true;
+                carGroup.add(hood);
+
+                // Wheels
+                const wheelGeometry = new THREE.CylinderGeometry(0.55, 0.55, 0.9, 16);
+                wheelGeometry.rotateZ(Math.PI / 2);
+                const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x111111 });
+
+                const wheelPositions = [
+                    { x: -1.6, y: 0.5, z: 2.2 },
+                    { x: 1.6, y: 0.5, z: 2.2 },
+                    { x: -1.6, y: 0.5, z: -2.2 },
+                    { x: 1.6, y: 0.5, z: -2.2 }
+                ];
+
+                this.wheels = [];
+                wheelPositions.forEach(pos => {
+                    const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                    wheel.position.set(pos.x, pos.y, pos.z);
+                    wheel.castShadow = true;
+                    carGroup.add(wheel);
+                    this.wheels.push(wheel);
+                });
+
+                // Exhaust pipes
+                const exhaustGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.4, 8);
+                const exhaustMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+                
+                const exhaust1 = new THREE.Mesh(exhaustGeometry, exhaustMaterial);
+                exhaust1.position.set(-0.6, 0.4, -2.6);
+                exhaust1.rotation.x = Math.PI / 2;
+                carGroup.add(exhaust1);
+                
+                const exhaust2 = new THREE.Mesh(exhaustGeometry, exhaustMaterial);
+                exhaust2.position.set(0.6, 0.4, -2.6);
+                exhaust2.rotation.x = Math.PI / 2;
+                carGroup.add(exhaust2);
+
+                return carGroup;
+            }
+        };
+
+        // Car Model 3: Formula-style Car
+        const carModel3 = {
+            name: "Fórmula",
+            color: 0xff3366,
+            acceleration: 0.22,
+            maxSpeed: 250,
+            torqueMultiplier: 0.9,
+            createModel: function() {
+                const carGroup = new THREE.Group();
+
+                // Main body
+                const bodyGeometry = new THREE.BoxGeometry(1.8, 0.6, 4.5);
+                const bodyMaterial = new THREE.MeshStandardMaterial({ color: this.color });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                body.position.y = 0.3;
+                body.castShadow = true;
+                carGroup.add(body);
+
+                // Cockpit
+                const cockpitGeometry = new THREE.BoxGeometry(0.8, 0.4, 1.2);
+                const cockpitMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff });
+                const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+                cockpit.position.set(0, 0.6, 0.5);
+                cockpit.castShadow = true;
+                carGroup.add(cockpit);
+
+                // Rear wing
+                const wingGeometry = new THREE.BoxGeometry(2.0, 0.1, 0.3);
+                const wingMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+                const wing = new THREE.Mesh(wingGeometry, wingMaterial);
+                wing.position.set(0, 0.8, -1.8);
+                wing.castShadow = true;
+                carGroup.add(wing);
+                
+                const wingSupportGeometry = new THREE.BoxGeometry(0.1, 0.4, 0.1);
+                const wingSupportMaterial = new THREE.MeshStandardMaterial({ color: 0x444444 });
+                
+                const wingSupport1 = new THREE.Mesh(wingSupportGeometry, wingSupportMaterial);
+                wingSupport1.position.set(-0.8, 0.5, -1.8);
+                carGroup.add(wingSupport1);
+                
+                const wingSupport2 = new THREE.Mesh(wingSupportGeometry, wingSupportMaterial);
+                wingSupport2.position.set(0.8, 0.5, -1.8);
+                carGroup.add(wingSupport2);
+
+                // Wheels
+                const wheelGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.5, 16);
+                wheelGeometry.rotateZ(Math.PI / 2);
+                const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+
+                const wheelPositions = [
+                    { x: -1.0, y: 0.3, z: 1.5 },
+                    { x: 1.0, y: 0.3, z: 1.5 },
+                    { x: -1.0, y: 0.3, z: -1.5 },
+                    { x: 1.0, y: 0.3, z: -1.5 }
+                ];
+
+                this.wheels = [];
+                wheelPositions.forEach(pos => {
+                    const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                    wheel.position.set(pos.x, pos.y, pos.z);
+                    wheel.castShadow = true;
+                    carGroup.add(wheel);
+                    this.wheels.push(wheel);
+                });
+
+                return carGroup;
+            }
+        };
+    </script>
+    
+    <!-- Track models -->
+    <script id="trackModels">
+        // Track Model 1: Oval Track
+        const trackModel1 = {
+            name: "Pista Oval",
+            createModel: function() {
+                const trackGroup = new THREE.Group();
+
+                // Track surface
+                const trackGeometry = new THREE.RingGeometry(80, 120, 64, 8);
+                const trackMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x333333,
+                    roughness: 0.9,
+                    metalness: 0.1
+                });
+                const trackMesh = new THREE.Mesh(trackGeometry, trackMaterial);
+                trackMesh.rotation.x = -Math.PI / 2;
+                trackMesh.receiveShadow = true;
+                trackGroup.add(trackMesh);
+
+                // Track borders
+                const borderGeometry = new THREE.TorusGeometry(120, 2, 16, 64);
+                const borderMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+                const outerBorder = new THREE.Mesh(borderGeometry, borderMaterial);
+                outerBorder.rotation.x = Math.PI / 2;
+                outerBorder.position.y = 0.1;
+                outerBorder.receiveShadow = true;
+                trackGroup.add(outerBorder);
+
+                const innerBorder = new THREE.Mesh(new THREE.TorusGeometry(80, 2, 16, 64), borderMaterial);
+                innerBorder.rotation.x = Math.PI / 2;
+                innerBorder.position.y = 0.1;
+                innerBorder.receiveShadow = true;
+                trackGroup.add(innerBorder);
+
+                // Track markings
+                const lineMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+                for (let i = 0; i < 16; i++) {
+                    const angle = (i / 16) * Math.PI * 2;
+                    const line = new THREE.Mesh(
+                        new THREE.BoxGeometry(2, 0.2, 12),
+                        lineMaterial
+                    );
+                    line.position.set(Math.cos(angle) * 100, 0.11, Math.sin(angle) * 100);
+                    line.rotation.y = -angle;
+                    line.receiveShadow = true;
+                    trackGroup.add(line);
+                }
+
+                // Grass area
+                const grassGeometry = new THREE.PlaneGeometry(1000, 1000, 10, 10);
+                const grassMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x228822,
+                    roughness: 1,
+                    metalness: 0
+                });
+                const grass = new THREE.Mesh(grassGeometry, grassMaterial);
+                grass.rotation.x = -Math.PI / 2;
+                grass.position.y = -0.1;
+                grass.receiveShadow = true;
+                trackGroup.add(grass);
+
+                return trackGroup;
+            },
+            checkpoints: [
+                {x: 100, z: 0, radius: 20}, // Start/finish line
+                {x: 0, z: 100, radius: 20}, // Turn 1
+                {x: -100, z: 0, radius: 20}, // Turn 2
+                {x: 0, z: -100, radius: 20}  // Turn 3
+            ]
+        };
+
+        // Track Model 2: Circuit Track
+        const trackModel2 = {
+            name: "Circuito",
+            createModel: function() {
+                const trackGroup = new THREE.Group();
+
+                // Create the track path
+                const path = new THREE.CurvePath();
+                
+                // Starting straight
+                path.add(new THREE.LineCurve3(
+                    new THREE.Vector3(0, 0, 0),
+                    new THREE.Vector3(100, 0, 0)
+                ));
+                
+                // First curve
+                const arc1 = new THREE.ArcCurve(
+                    100, 0, // center
+                    50, // radius
+                    Math.PI, Math.PI * 1.5, // angles
+                    false // clockwise
+                );
+                path.add(arc1);
+                
+                // Back straight
+                path.add(new THREE.LineCurve3(
+                    new THREE.Vector3(100, -50, 0),
+                    new THREE.Vector3(0, -50, 0)
+                ));
+                
+                // Second curve
+                const arc2 = new THREE.ArcCurve(
+                    0, -50, // center
+                    50, // radius
+                    Math.PI * 1.5, Math.PI * 2, // angles
+                    false // clockwise
+                );
+                path.add(arc2);
+                
+                // Connect back to start
+                path.add(new THREE.LineCurve3(
+                    new THREE.Vector3(0, 0, 0),
+                    new THREE.Vector3(0, 0, 0)
+                ));
+
+                // Create track geometry
+                const trackGeometry = new THREE.TubeGeometry(path, 64, 10, 8, false);
+                const trackMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x333333,
+                    roughness: 0.9,
+                    metalness: 0.1
+                });
+                const trackMesh = new THREE.Mesh(trackGeometry, trackMaterial);
+                trackMesh.rotation.x = -Math.PI / 2;
+                trackMesh.position.y = 0.1;
+                trackMesh.receiveShadow = true;
+                trackGroup.add(trackMesh);
+
+                // Grass area
+                const grassGeometry = new THREE.PlaneGeometry(1000, 1000, 10, 10);
+                const grassMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x228822,
+                    roughness: 1,
+                    metalness: 0
+                });
+                const grass = new THREE.Mesh(grassGeometry, grassMaterial);
+                grass.rotation.x = -Math.PI / 2;
+                grass.position.y = -0.1;
+                grass.receiveShadow = true;
+                trackGroup.add(grass);
+
+                // Track borders
+                const borderGeometry = new THREE.TubeGeometry(path, 64, 12, 8, false);
+                const borderMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+                const border = new THREE.Mesh(borderGeometry, borderMaterial);
+                border.rotation.x = -Math.PI / 2;
+                border.position.y = 0.11;
+                border.receiveShadow = true;
+                trackGroup.add(border);
+
+                return trackGroup;
+            },
+            checkpoints: [
+                {x: 0, z: 0, radius: 15}, // Start/finish line
+                {x: 100, z: -25, radius: 15}, // End of straight
+                {x: 50, z: -50, radius: 15}, // Mid curve
+                {x: 0, z: -25, radius: 15}  // Back straight
+            ]
+        };
+    </script>
+    
+    <!-- Sound Manager -->
+    <script>
+        class SoundManager {
+            constructor() {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                this.sounds = {};
+                this.engineSoundSource = null;
+                this.engineGain = null;
+                this.enginePanner = null;
+                this.enginePlaying = false;
+            }
+
+            init() {
+                // Create engine sound nodes
+                this.engineGain = this.audioContext.createGain();
+                this.enginePanner = this.audioContext.createStereoPanner();
+                this.engineGain.connect(this.enginePanner);
+                this.enginePanner.connect(this.audioContext.destination);
+                this.engineGain.gain.value = 0.3;
+            }
+
+            loadSound(name, url) {
+                return new Promise((resolve, reject) => {
+                    fetch(url)
+                        .then(response => response.arrayBuffer())
+                        .then(data => this.audioContext.decodeAudioData(data))
+                        .then(buffer => {
+                            this.sounds[name] = buffer;
+                            resolve();
+                        })
+                        .catch(error => reject(error));
+                });
+            }
+
+            playSound(name, loop = false, volume = 1.0) {
+                if (!this.sounds[name]) return;
+                
+                const source = this.audioContext.createBufferSource();
+                const gainNode = this.audioContext.createGain();
+                
+                source.buffer = this.sounds[name];
+                source.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                gainNode.gain.value = volume;
+                source.loop = loop;
+                source.start();
+                
+                return source;
+            }
+
+            startEngineSound() {
+                if (this.enginePlaying) return;
+                
+                // Create engine sound oscillator
+                this.engineSoundSource = this.audioContext.createOscillator();
+                this.engineSoundSource.type = 'sawtooth';
+                this.engineSoundSource.frequency.value = 100;
+                
+                // Create filter for engine sound
+                const filter = this.audioContext.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 500;
+                
+                this.engineSoundSource.connect(filter);
+                filter.connect(this.engineGain);
+                this.engineSoundSource.start();
+                this.enginePlaying = true;
+            }
+
+            updateEngineSound(rpm, maxRpm) {
+                if (!this.enginePlaying) return;
+                
+                // RPM range from 0.0 to 1.0
+                const rpmRatio = Math.min(1.0, rpm / maxRpm);
+                
+                // Update frequency based on RPM
+                const minFreq = 80;
+                const maxFreq = 600;
+                this.engineSoundSource.frequency.value = minFreq + (maxFreq - minFreq) * rpmRatio;
+                
+                // Update filter cutoff based on RPM
+                const minCutoff = 500;
+                const maxCutoff = 2000;
+                filter.frequency.value = minCutoff + (maxCutoff - minCutoff) * rpmRatio;
+                
+                // Update volume based on RPM
+                this.engineGain.gain.value = 0.2 + 0.3 * rpmRatio;
+            }
+
+            stopEngineSound() {
+                if (this.engineSoundSource && this.enginePlaying) {
+                    this.engineSoundSource.stop();
+                    this.enginePlaying = false;
+                }
+            }
+
+            playGearShift() {
+                this.playSound('gear_shift', false, 0.5);
+            }
+
+            playSkid() {
+                this.playSound('skid', false, 0.7);
+            }
+        }
+    </script>
+
     <script>
         // Variáveis globais
         let scene, camera, renderer;
         let localCar, remoteCar, track;
-        let smokeParticles = [];
         let clock = new THREE.Clock();
         let deltaTime = 0;
         let players = {};
@@ -510,10 +1057,13 @@
         let lastMoveSent = 0;
         let startTime = null;
         let finishTimes = {};
+        let soundManager = new SoundManager();
 
         // Configurações do jogo
         const gameConfig = {
             playerId: null,
+            playerName: "Player",
+            opponentName: "Oponente",
             roomId: null,
             isOffline: false,
             status: 'waiting',
@@ -531,7 +1081,9 @@
                 speed: 0,
                 gears: 0
             },
-            money: 300
+            money: 300,
+            betAmount: 0,
+            selectedCar: null
         };
 
         // Configurações de marchas
@@ -576,13 +1128,12 @@
         const generateIdButton = document.getElementById('generateIdButton');
         const copyIdButton = document.getElementById('copyIdButton');
         const roomInput = document.getElementById('roomInput');
+        const playerNameInput = document.getElementById('playerNameInput');
         const statusDisplay = document.getElementById('status');
         const speedDisplay = document.getElementById('speedDisplay');
         const gearDisplay = document.getElementById('gearDisplay');
-        const mobileGearDisplay = document.getElementById('mobileGearDisplay');
-        const torqueFill = document.querySelector('.torque-fill');
-        const lapCounter = document.getElementById('lapCounter');
-        const positionDisplay = document.getElementById('positionDisplay');
+        const rpmNeedle = document.getElementById('rpmNeedle');
+        const playerNameTag = document.getElementById('playerNameTag');
         const moneyDisplay = document.getElementById('moneyDisplay');
         const loadingOverlay = document.getElementById('loadingOverlay');
         const endGameScreen = document.getElementById('endGameScreen');
@@ -590,12 +1141,21 @@
         const raceResults = document.getElementById('raceResults');
         const rematchBtn = document.getElementById('rematchBtn');
         const exitBtn = document.getElementById('exitBtn');
+        const betValue = document.getElementById('betValue');
+        const betIncrease = document.getElementById('betIncrease');
+        const betDecrease = document.getElementById('betDecrease');
 
         // Elementos de controle mobile
         const accelerateBtn = document.getElementById('accelerateBtn');
         const brakeBtn = document.getElementById('brakeBtn');
         const gearUpBtn = document.getElementById('gearUpBtn');
         const gearDownBtn = document.getElementById('gearDownBtn');
+        const dpadLeft = document.getElementById('dpadLeft');
+        const dpadRight = document.getElementById('dpadRight');
+
+        // Carros e pistas disponíveis
+        const carModels = [carModel1, carModel2, carModel3];
+        const trackModels = [trackModel1, trackModel2];
 
         // Inicialização do jogo
         function initGame() {
@@ -621,6 +1181,16 @@
             directionalLight.shadow.mapSize.height = 1024;
             scene.add(directionalLight);
 
+            // Carregar sons
+            soundManager.init();
+            // Em um ambiente real, carregaríamos os sons de arquivos, mas aqui vamos gerar alguns sons sintéticos
+            generateSyntheticSounds();
+
+            // Selecionar carro padrão se nenhum foi selecionado
+            if (!gameConfig.selectedCar) {
+                gameConfig.selectedCar = carModels[0];
+            }
+
             createTrack();
             createLocalCar();
             if (!gameConfig.isOffline) {
@@ -632,123 +1202,53 @@
             window.addEventListener('resize', onWindowResize);
         }
 
+        function generateSyntheticSounds() {
+            // Gerar som sintético de troca de marcha
+            const gearShiftDuration = 0.3;
+            const sampleRate = soundManager.audioContext.sampleRate;
+            const buffer = soundManager.audioContext.createBuffer(1, sampleRate * gearShiftDuration, sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            for (let i = 0; i < data.length; i++) {
+                const t = i / sampleRate;
+                // Um som de "clique" curto
+                data[i] = Math.sin(2 * Math.PI * 500 * t) * Math.exp(-20 * t);
+            }
+            soundManager.sounds['gear_shift'] = buffer;
+
+            // Gerar som sintético de derrapagem
+            const skidDuration = 1.0;
+            const skidBuffer = soundManager.audioContext.createBuffer(1, sampleRate * skidDuration, sampleRate);
+            const skidData = skidBuffer.getChannelData(0);
+            
+            for (let i = 0; i < skidData.length; i++) {
+                const t = i / sampleRate;
+                // Ruído branco com envelope
+                skidData[i] = (Math.random() * 2 - 1) * Math.exp(-2 * t);
+            }
+            soundManager.sounds['skid'] = skidBuffer;
+        }
+
         // Criar pista de corrida
         function createTrack() {
-            const trackGroup = new THREE.Group();
-
-            const trackGeometry = new THREE.RingGeometry(80, 120, 64, 8);
-            const trackMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x333333,
-                roughness: 0.9,
-                metalness: 0.1
-            });
-            const trackMesh = new THREE.Mesh(trackGeometry, trackMaterial);
-            trackMesh.rotation.x = -Math.PI / 2;
-            trackMesh.receiveShadow = true;
-            trackGroup.add(trackMesh);
-
-            const borderGeometry = new THREE.TorusGeometry(120, 2, 16, 64);
-            const borderMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-            const outerBorder = new THREE.Mesh(borderGeometry, borderMaterial);
-            outerBorder.rotation.x = Math.PI / 2;
-            outerBorder.position.y = 0.1;
-            outerBorder.receiveShadow = true;
-            trackGroup.add(outerBorder);
-
-            const innerBorder = new THREE.Mesh(new THREE.TorusGeometry(80, 2, 16, 64), borderMaterial);
-            innerBorder.rotation.x = Math.PI / 2;
-            innerBorder.position.y = 0.1;
-            innerBorder.receiveShadow = true;
-            trackGroup.add(innerBorder);
-
-            const lineMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
-            for (let i = 0; i < 16; i++) {
-                const angle = (i / 16) * Math.PI * 2;
-                const line = new THREE.Mesh(
-                    new THREE.BoxGeometry(2, 0.2, 12),
-                    lineMaterial
-                );
-                line.position.set(Math.cos(angle) * 100, 0.11, Math.sin(angle) * 100);
-                line.rotation.y = -angle;
-                line.receiveShadow = true;
-                trackGroup.add(line);
-            }
-
-            const grassGeometry = new THREE.PlaneGeometry(1000, 1000, 10, 10);
-            const grassMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x228822,
-                roughness: 1,
-                metalness: 0
-            });
-            const grass = new THREE.Mesh(grassGeometry, grassMaterial);
-            grass.rotation.x = -Math.PI / 2;
-            grass.position.y = -0.1;
-            grass.receiveShadow = true;
-            trackGroup.add(grass);
-
-            scene.add(trackGroup);
-            track = trackGroup;
+            track = trackModels[0].createModel();
+            scene.add(track);
         }
 
         // Criar carro local
         function createLocalCar() {
-            const carGroup = new THREE.Group();
-
-            const bodyGeometry = new THREE.BoxGeometry(3, 1, 5);
-            const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x3366ff });
-            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-            body.position.y = 0.5;
-            body.castShadow = true;
-            carGroup.add(body);
-
-            const hoodGeometry = new THREE.BoxGeometry(2.8, 0.5, 2);
-            const hoodMaterial = new THREE.MeshStandardMaterial({ color: 0x2244cc });
-            const hood = new THREE.Mesh(hoodGeometry, hoodMaterial);
-            hood.position.set(0, 0.75, 1);
-            hood.castShadow = true;
-            carGroup.add(hood);
-
-            const wheelGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.8, 16);
-            wheelGeometry.rotateZ(Math.PI / 2);
-            const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
-
-            const wheelPositions = [
-                { x: -1.5, y: 0.5, z: 2 },
-                { x: 1.5, y: 0.5, z: 2 },
-                { x: -1.5, y: 0.5, z: -2 },
-                { x: 1.5, y: 0.5, z: -2 }
-            ];
-
-            const wheels = [];
-            wheelPositions.forEach(pos => {
-                const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-                wheel.position.set(pos.x, pos.y, pos.z);
-                wheel.castShadow = true;
-                carGroup.add(wheel);
-                wheels.push(wheel);
-            });
-
-            const lightGeometry = new THREE.SphereGeometry(0.2, 16, 16);
-            const lightMaterial = new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0xffff00 });
-
-            const frontLight1 = new THREE.Mesh(lightGeometry, lightMaterial);
-            frontLight1.position.set(-0.8, 0.7, 2.5);
-            carGroup.add(frontLight1);
-
-            const frontLight2 = new THREE.Mesh(lightGeometry, lightMaterial);
-            frontLight2.position.set(0.8, 0.7, 2.5);
-            carGroup.add(frontLight2);
-
-            scene.add(carGroup);
+            const carModel = gameConfig.selectedCar;
             localCar = {
-                group: carGroup,
-                wheels: wheels,
+                group: carModel.createModel(),
+                wheels: carModel.wheels,
                 position: new THREE.Vector3(100, 0.5, 0),
                 rotation: 0,
-                targetRotation: 0
+                targetRotation: 0,
+                nameTag: createNameTag(gameConfig.playerName, carModel.color)
             };
 
-            localCar.group.position.copy(localCar.position);
+            localCar.group.add(localCar.nameTag);
+            scene.add(localCar.group);
             players[gameConfig.playerId] = {
                 x: localCar.position.x,
                 z: localCar.position.z,
@@ -758,51 +1258,18 @@
 
         // Criar carro remoto
         function createRemoteCar() {
-            const carGroup = new THREE.Group();
-
-            const bodyGeometry = new THREE.BoxGeometry(3, 1, 5);
-            const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xff3366 });
-            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-            body.position.y = 0.5;
-            body.castShadow = true;
-            carGroup.add(body);
-
-            const hoodGeometry = new THREE.BoxGeometry(2.8, 0.5, 2);
-            const hoodMaterial = new THREE.MeshStandardMaterial({ color: 0xcc2244 });
-            const hood = new THREE.Mesh(hoodGeometry, hoodMaterial);
-            hood.position.set(0, 0.75, 1);
-            hood.castShadow = true;
-            carGroup.add(hood);
-
-            const wheelGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.8, 16);
-            wheelGeometry.rotateZ(Math.PI / 2);
-            const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
-
-            const wheelPositions = [
-                { x: -1.5, y: 0.5, z: 2 },
-                { x: 1.5, y: 0.5, z: 2 },
-                { x: -1.5, y: 0.5, z: -2 },
-                { x: 1.5, y: 0.5, z: -2 }
-            ];
-
-            const wheels = [];
-            wheelPositions.forEach(pos => {
-                const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-                wheel.position.set(pos.x, pos.y, pos.z);
-                wheel.castShadow = true;
-                carGroup.add(wheel);
-                wheels.push(wheel);
-            });
-
-            scene.add(carGroup);
+            const opponentCar = carModels[1]; // Carro diferente para o oponente
             remoteCar = {
-                group: carGroup,
-                wheels: wheels,
+                group: opponentCar.createModel(),
+                wheels: opponentCar.wheels,
                 position: new THREE.Vector3(90, 0.5, 0),
-                rotation: 0
+                rotation: 0,
+                nameTag: createNameTag(gameConfig.opponentName, opponentCar.color)
             };
 
-            remoteCar.group.position.copy(remoteCar.position);
+            remoteCar.group.add(remoteCar.nameTag);
+            scene.add(remoteCar.group);
+
             const opponentId = gameConfig.playerId === 0 ? 1 : 0;
             players[opponentId] = {
                 x: remoteCar.position.x,
@@ -811,14 +1278,41 @@
             };
         }
 
+        // Criar etiqueta de nome
+        function createNameTag(name, color) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 64;
+            const context = canvas.getContext('2d');
+            
+            // Fundo
+            context.fillStyle = `rgba(0, 0, 0, 0.7)`;
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Texto
+            context.fillStyle = `rgb(${(color >> 16) & 0xff}, ${(color >> 8) & 0xff}, ${color & 0xff})`;
+            context.font = 'bold 24px Arial';
+            context.textAlign = 'center';
+            context.fillText(name, canvas.width/2, canvas.height/2 + 8);
+            
+            // Criar sprite
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(material);
+            sprite.scale.set(10, 2.5, 1);
+            sprite.position.y = 3;
+            
+            return sprite;
+        }
+
         // Configurar controles
         function setupControls() {
             const keys = {};
 
             window.addEventListener('keydown', (e) => {
                 keys[e.code] = true;
-                if (e.code === 'KeyW' || e.code === 'ArrowUp') shiftGearUp();
-                if (e.code === 'KeyS' || e.code === 'ArrowDown') shiftGearDown();
+                if (e.code === 'KeyW') shiftGearUp();
+                if (e.code === 'KeyS') shiftGearDown();
             });
 
             window.addEventListener('keyup', (e) => {
@@ -836,48 +1330,30 @@
             });
 
             brakeBtn.addEventListener('touchstart', () => {
-                keys['KeyS'] = keys['ArrowDown'] = true;
+                keys['KeyS'] = true;
                 brakeBtn.style.background = 'rgba(0, 255, 234, 0.5)';
             });
 
             brakeBtn.addEventListener('touchend', () => {
-                keys['KeyS'] = keys['ArrowDown'] = false;
+                keys['KeyS'] = false;
                 brakeBtn.style.background = 'rgba(255, 255, 255, 0.2)';
             });
 
             gearUpBtn.addEventListener('click', shiftGearUp);
             gearDownBtn.addEventListener('click', shiftGearDown);
 
-            const dpadButtons = document.querySelectorAll('.dpad-btn');
-            dpadButtons.forEach(btn => {
-                btn.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    const direction = btn.textContent;
-                    if (direction === '↑') keys['KeyW'] = keys['ArrowUp'] = true;
-                    if (direction === '↓') keys['KeyS'] = keys['ArrowDown'] = true;
-                    if (direction === '←') keys['KeyA'] = keys['ArrowLeft'] = true;
-                    if (direction === '→') keys['KeyD'] = keys['ArrowRight'] = true;
-                    btn.style.background = 'rgba(0, 255, 234, 0.5)';
-                });
-
-                btn.addEventListener('touchend', (e) => {
-                    e.preventDefault();
-                    const direction = btn.textContent;
-                    if (direction === '↑') keys['KeyW'] = keys['ArrowUp'] = false;
-                    if (direction === '↓') keys['KeyS'] = keys['ArrowDown'] = false;
-                    if (direction === '←') keys['KeyA'] = keys['ArrowLeft'] = false;
-                    if (direction === '→') keys['KeyD'] = keys['ArrowRight'] = false;
-                    btn.style.background = 'rgba(255, 255, 255, 0.2)';
-                });
-            });
+            dpadLeft.addEventListener('touchstart', () => { keys['KeyA'] = true; });
+            dpadLeft.addEventListener('touchend', () => { keys['KeyA'] = false; });
+            dpadRight.addEventListener('touchstart', () => { keys['KeyD'] = true; });
+            dpadRight.addEventListener('touchend', () => { keys['KeyD'] = false; });
 
             function updateControls() {
                 gameConfig.acceleration = keys['Space'] ? 1 : 0;
-                if (keys['KeyS'] || keys['ArrowDown']) gameConfig.acceleration = -0.5;
+                if (keys['KeyS'] && !keys['Space']) gameConfig.acceleration = -0.5;
 
                 gameConfig.steering = 0;
-                if (keys['KeyA'] || keys['ArrowLeft']) gameConfig.steering = 1;
-                if (keys['KeyD'] || keys['ArrowRight']) gameConfig.steering = -1;
+                if (keys['KeyA']) gameConfig.steering = 1;
+                if (keys['KeyD']) gameConfig.steering = -1;
 
                 updatePhysics();
             }
@@ -911,7 +1387,8 @@
                 statusDisplay.textContent = 'Aguardando oponente...';
                 ws.send(JSON.stringify({ 
                     type: 'join', 
-                    roomId: gameConfig.roomId 
+                    roomId: gameConfig.roomId,
+                    playerName: gameConfig.playerName
                 }));
             };
 
@@ -932,6 +1409,7 @@
                     const data = JSON.parse(event.data);
                     if (data.type === 'start') {
                         gameConfig.playerId = data.playerId;
+                        gameConfig.opponentName = data.opponentName || "Oponente";
                         statusDisplay.textContent = `Você é o jogador ${gameConfig.playerId + 1}`;
                         initPeerConnection();
                         if (gameConfig.playerId === 0) {
@@ -1011,9 +1489,6 @@
                             remoteCar.wheels.forEach(wheel => {
                                 wheel.rotation.x += wheelRotation;
                             });
-                            if (data.speed > 30 && Math.random() < 0.3) {
-                                createSmoke(data.position.x, data.position.z, data.position.rotation, 0xff3366);
-                            }
                         }
                     } else if (data.type === 'lap') {
                         const opponentId = gameConfig.playerId === 0 ? 1 : 0;
@@ -1021,7 +1496,7 @@
                         if (data.lapCount >= 3 && !gameConfig.status.includes('finished')) {
                             finishTimes[opponentId] = Date.now() - startTime;
                             gameConfig.status = 'opponent_finished';
-                            showEndGameScreen(`Jogador ${parseInt(opponentId) + 1} venceu!`);
+                            showEndGameScreen(`${gameConfig.opponentName} venceu!`);
                         }
                     } else if (data.type === 'restart') {
                         restartGame();
@@ -1039,6 +1514,7 @@
             gameConfig.status = 'playing';
             startTime = Date.now();
             finishTimes = {};
+            soundManager.startEngineSound();
 
             players[gameConfig.playerId] = {
                 x: 100,
@@ -1068,12 +1544,10 @@
                 remoteCar.group.rotation.y = remoteCar.rotation;
             }
 
-            lapCounter.textContent = 'VOLTA: 0/3';
-            positionDisplay.textContent = 'POSIÇÃO: 1°';
-            speedDisplay.textContent = '0 km/h';
+            playerNameTag.textContent = gameConfig.playerName;
+            speedDisplay.textContent = '0';
             gearDisplay.textContent = 'N';
-            mobileGearDisplay.textContent = 'N';
-            torqueFill.style.width = '0%';
+            rpmNeedle.style.transform = `translate(-50%, -100%) rotate(-135deg)`;
             loadingOverlay.style.display = 'none';
             endGameScreen.style.display = 'none';
         }
@@ -1084,6 +1558,7 @@
             gameConfig.status = 'playing';
             startTime = Date.now();
             finishTimes = {};
+            soundManager.startEngineSound();
 
             players[gameConfig.playerId] = {
                 x: 100,
@@ -1113,22 +1588,20 @@
                 remoteCar.group.rotation.y = remoteCar.rotation;
             }
 
-            lapCounter.textContent = 'VOLTA: 0/3';
-            positionDisplay.textContent = 'POSIÇÃO: 1°';
-            speedDisplay.textContent = '0 km/h';
+            speedDisplay.textContent = '0';
             gearDisplay.textContent = 'N';
-            mobileGearDisplay.textContent = 'N';
-            torqueFill.style.width = '0%';
+            rpmNeedle.style.transform = `translate(-50%, -100%) rotate(-135deg)`;
             endGameScreen.style.display = 'none';
         }
 
         // Atualizar física do carro
         function updatePhysics() {
+            const carModel = gameConfig.selectedCar;
             const gear = gearSettings[gameConfig.gear];
             const speed = Math.abs(gameConfig.speed);
 
             // Calcular torque baseado na velocidade e faixa ideal
-            let torqueEfficiency = 10.1;
+            let torqueEfficiency = 0.1;
             if (gameConfig.gear === 'N') {
                 torqueEfficiency = gear.torqueMultiplier;
             } else if (gameConfig.gear === 'R') {
@@ -1153,9 +1626,9 @@
                 }
             }
 
-            // Aplicar upgrades
-            const torqueMultiplier = 1 + (gameConfig.upgrades.torque * 0.2);
-            const speedMultiplier = 1 + (gameConfig.upgrades.speed * 0.15);
+            // Aplicar upgrades e características do carro
+            const torqueMultiplier = (1 + (gameConfig.upgrades.torque * 0.2)) * carModel.torqueMultiplier;
+            const speedMultiplier = (1 + (gameConfig.upgrades.speed * 0.15)) * (carModel.maxSpeed / 220);
             const gearMultiplier = 1 + (gameConfig.upgrades.gears * 0.25);
 
             // Calcular aceleração
@@ -1209,8 +1682,16 @@
                 wheel.rotation.x += wheelRotation;
             });
 
-            if (gameConfig.acceleration > 0 && gameConfig.speed > 30 && Math.random() < 0.3) {
-                createSmoke(localCar.position.x, localCar.position.z, localCar.rotation, 0x3366ff);
+            // Atualizar som do motor
+            const maxRpm = 8000;
+            const rpm = Math.min(maxRpm, 1000 + Math.abs(gameConfig.speed) * 30);
+            soundManager.updateEngineSound(rpm, maxRpm);
+
+            // Verificar se está derrapando
+            if (Math.abs(gameConfig.steering) > 0.5 && Math.abs(gameConfig.speed) > 50) {
+                if (Math.random() < 0.1) {
+                    soundManager.playSkid();
+                }
             }
 
             updateCamera();
@@ -1235,11 +1716,11 @@
 
         // Verificar se completou uma volta
         function checkLapCompletion() {
+            // Verificação simplificada para demonstração
             if (localCar.position.z > -1 && localCar.position.z < 1 && localCar.position.x > 80 && localCar.position.x < 120) {
                 if (gameConfig.lastCheckpoint === 1) {
                     gameConfig.lap++;
                     gameConfig.lastCheckpoint = 0;
-                    lapCounter.textContent = `VOLTA: ${gameConfig.lap}/3`;
                     players[gameConfig.playerId].lap = gameConfig.lap;
 
                     if (dataChannel && dataChannel.readyState === 'open') {
@@ -1254,6 +1735,10 @@
                         finishTimes[gameConfig.playerId] = Date.now() - startTime;
                         gameConfig.status = 'finished';
                         showEndGameScreen('Você venceu!');
+                        
+                        // Ganhar dinheiro da aposta
+                        gameConfig.money += gameConfig.betAmount * 2;
+                        
                         if (dataChannel && dataChannel.readyState === 'open') {
                             dataChannel.send(JSON.stringify({ 
                                 type: 'raceOver', 
@@ -1284,53 +1769,12 @@
         function updateUI() {
             speedDisplay.textContent = Math.abs(Math.round(gameConfig.speed));
             gearDisplay.textContent = gameConfig.gear;
-            mobileGearDisplay.textContent = gameConfig.gear;
-            torqueFill.style.width = `${gameConfig.torque}%`;
-            positionDisplay.textContent = `POSIÇÃO: ${calculatePosition()}°`;
-        }
-
-        // Calcular posição na corrida
-        function calculatePosition() {
-            const opponentId = gameConfig.playerId === 0 ? 1 : 0;
-            const playerLaps = gameConfig.lap;
-            const opponentLaps = players[opponentId]?.lap || 0;
-            if (playerLaps > opponentLaps) return 1;
-            if (playerLaps < opponentLaps) return 2;
-            return 1; // Empate se número de voltas for igual
-        }
-
-        // Criar efeito de fumaça
-        function createSmoke(x, z, rotation, color) {
-            const smoke = document.createElement('div');
-            smoke.className = 'smoke-particle';
-            smoke.style.left = `${50 + (x / 4)}%`;
-            smoke.style.top = `${50 - (z / 4)}%`;
-            smoke.style.backgroundColor = `rgba(${color >> 16}, ${(color >> 8) & 0xff}, ${color & 0xff}, 0.7)`;
-            document.getElementById('gameContainer').appendChild(smoke);
-
-            let size = 10;
-            let opacity = 0.7;
-            const angle = Math.random() * Math.PI * 2;
-            const speed = 1 + Math.random() * 2;
-
-            const animateSmoke = () => {
-                size += 0.5;
-                opacity -= 0.01;
-
-                if (opacity <= 0) {
-                    smoke.remove();
-                    return;
-                }
-
-                smoke.style.width = `${size}px`;
-                smoke.style.height = `${size}px`;
-                smoke.style.opacity = opacity;
-                smoke.style.transform = `translate(${Math.cos(angle) * speed}px, ${Math.sin(angle) * speed}px)`;
-
-                requestAnimationFrame(animateSmoke);
-            };
-
-            animateSmoke();
+            
+            // Atualizar RPM gauge
+            const maxRpm = 8000;
+            const rpm = Math.min(maxRpm, 1000 + Math.abs(gameConfig.speed) * 30);
+            const rpmAngle = -135 + (rpm / maxRpm) * 270; // -135° to 135°
+            rpmNeedle.style.transform = `translate(-50%, -100%) rotate(${rpmAngle}deg)`;
         }
 
         // Trocar marcha para cima
@@ -1339,6 +1783,7 @@
             const currentIndex = gears.indexOf(gameConfig.gear);
             if (currentIndex < gears.length - 1) {
                 gameConfig.gear = gears[currentIndex + 1];
+                soundManager.playGearShift();
             }
         }
 
@@ -1348,6 +1793,7 @@
             const currentIndex = gears.indexOf(gameConfig.gear);
             if (currentIndex > 0) {
                 gameConfig.gear = gears[currentIndex - 1];
+                soundManager.playGearShift();
             }
         }
 
@@ -1365,12 +1811,14 @@
 
             let resultsHTML = '<h3>Resultados:</h3>';
             Object.keys(finishTimes).sort((a, b) => finishTimes[a] - finishTimes[b]).forEach(id => {
+                const playerName = id == gameConfig.playerId ? gameConfig.playerName : gameConfig.opponentName;
                 const time = (finishTimes[id] / 1000).toFixed(2);
-                resultsHTML += `<p>Jogador ${parseInt(id) + 1}: ${time}s</p>`;
+                resultsHTML += `<p>${playerName}: ${time}s</p>`;
             });
 
             raceResults.innerHTML = resultsHTML;
             gameConfig.status = 'finished';
+            soundManager.stopEngineSound();
         }
 
         // Fechar conexões
@@ -1387,12 +1835,13 @@
                 ws.close();
                 ws = null;
             }
+            soundManager.stopEngineSound();
         }
 
         // Loop de animação
         function animate() {
             requestAnimationFrame(animate);
-            deltaTime = clock.getDelta();
+            deltaTime = Math.min(clock.getDelta(), 0.1); // Limit delta time to prevent physics issues
 
             if (gameConfig.status === 'playing') {
                 updatePhysics();
@@ -1402,91 +1851,113 @@
         }
 
         // Eventos de interface
-        generateIdButton.addEventListener('click', () => {
-            gameConfig.roomId = generateRoomId();
-            roomInput.value = gameConfig.roomId;
-            statusDisplay.textContent = 'ID gerado!';
-        });
+        window.addEventListener('load', () => {
+            // Inicializar valores
+            playerNameTag.textContent = gameConfig.playerName;
+            betValue.textContent = gameConfig.betAmount;
+            
+            // Event listeners
+            generateIdButton.addEventListener('click', () => {
+                gameConfig.roomId = generateRoomId();
+                roomInput.value = gameConfig.roomId;
+                statusDisplay.textContent = 'ID gerado!';
+            });
 
-        copyIdButton.addEventListener('click', () => {
-            roomInput.select();
-            document.execCommand('copy');
-            statusDisplay.textContent = 'ID copiado!';
-        });
+            copyIdButton.addEventListener('click', () => {
+                roomInput.select();
+                document.execCommand('copy');
+                statusDisplay.textContent = 'ID copiado!';
+            });
 
-        startButton.addEventListener('click', () => {
-            gameConfig.isOffline = false;
-            gameConfig.roomId = roomInput.value.trim();
-            if (!gameConfig.roomId) {
-                statusDisplay.textContent = 'Por favor, insira ou gere um ID de sala';
-                return;
-            }
-            connectToServer();
-            startScreen.classList.add('hidden');
-            upgradeScreen.classList.remove('hidden');
-            moneyDisplay.textContent = `Dinheiro: $${gameConfig.money}`;
-        });
+            startButton.addEventListener('click', () => {
+                gameConfig.isOffline = false;
+                gameConfig.playerName = playerNameInput.value || "Player";
+                gameConfig.roomId = roomInput.value.trim();
+                if (!gameConfig.roomId) {
+                    statusDisplay.textContent = 'Por favor, insira ou gere um ID de sala';
+                    return;
+                }
+                connectToServer();
+                startScreen.classList.add('hidden');
+                upgradeScreen.classList.remove('hidden');
+                moneyDisplay.textContent = `Dinheiro: $${gameConfig.money}`;
+            });
 
-        offlineButton.addEventListener('click', () => {
-            gameConfig.isOffline = true;
-            startScreen.classList.add('hidden');
-            upgradeScreen.classList.remove('hidden');
-            moneyDisplay.textContent = `Dinheiro: $${gameConfig.money}`;
-            statusDisplay.textContent = 'Modo Offline';
-        });
+            offlineButton.addEventListener('click', () => {
+                gameConfig.isOffline = true;
+                gameConfig.playerName = playerNameInput.value || "Player";
+                startScreen.classList.add('hidden');
+                upgradeScreen.classList.remove('hidden');
+                moneyDisplay.textContent = `Dinheiro: $${gameConfig.money}`;
+                statusDisplay.textContent = 'Modo Offline';
+            });
 
-        raceButton.addEventListener('click', () => {
-            upgradeScreen.classList.add('hidden');
-            gameScreen.classList.remove('hidden');
-            startGame();
-        });
+            raceButton.addEventListener('click', () => {
+                upgradeScreen.classList.add('hidden');
+                gameScreen.classList.remove('hidden');
+                startGame();
+            });
 
-        document.querySelectorAll('.buy-button').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const upgradeType = e.target.dataset.upgrade;
-                const cost = upgradeType === 'torque' ? 100 : upgradeType === 'speed' ? 150 : 200;
+            document.querySelectorAll('.buy-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const upgradeType = e.target.dataset.upgrade;
+                    const cost = upgradeType === 'torque' ? 100 : upgradeType === 'speed' ? 150 : 200;
 
-                if (gameConfig.money >= cost) {
-                    gameConfig.money -= cost;
-                    gameConfig.upgrades[upgradeType]++;
-                    moneyDisplay.textContent = `Dinheiro: $${gameConfig.money}`;
-                    e.target.textContent = 'COMPRADO!';
-                    e.target.disabled = true;
+                    if (gameConfig.money >= cost) {
+                        gameConfig.money -= cost;
+                        gameConfig.upgrades[upgradeType]++;
+                        moneyDisplay.textContent = `Dinheiro: $${gameConfig.money}`;
+                        e.target.textContent = 'COMPRADO!';
+                        e.target.disabled = true;
 
-                    // Desabilitar botões se não houver dinheiro suficiente
-                    document.querySelectorAll('.buy-button').forEach(btn => {
-                        const btnCost = btn.dataset.upgrade === 'torque' ? 100 : btn.dataset.upgrade === 'speed' ? 150 : 200;
-                        btn.disabled = gameConfig.money < btnCost;
-                    });
+                        // Desabilitar botões se não houver dinheiro suficiente
+                        document.querySelectorAll('.buy-button').forEach(btn => {
+                            const btnCost = btn.dataset.upgrade === 'torque' ? 100 : 
+                                           btn.dataset.upgrade === 'speed' ? 150 : 200;
+                            btn.disabled = gameConfig.money < btnCost;
+                        });
+                    }
+                });
+            });
+
+            betIncrease.addEventListener('click', () => {
+                if (gameConfig.money > gameConfig.betAmount) {
+                    gameConfig.betAmount = Math.min(gameConfig.money, gameConfig.betAmount + 10);
+                    betValue.textContent = gameConfig.betAmount;
                 }
             });
-        });
 
-        rematchBtn.addEventListener('click', () => {
-            if (dataChannel && dataChannel.readyState === 'open') {
-                dataChannel.send(JSON.stringify({ type: 'restart' }));
-                restartGame();
-            } else {
-                statusDisplay.textContent = 'Reconectando...';
-                gameConfig.roomId = roomInput.value.trim();
-                if (gameConfig.roomId) {
-                    connectToServer();
-                    upgradeScreen.classList.add('hidden');
-                    gameScreen.classList.remove('hidden');
-                    startGame();
+            betDecrease.addEventListener('click', () => {
+                gameConfig.betAmount = Math.max(0, gameConfig.betAmount - 10);
+                betValue.textContent = gameConfig.betAmount;
+            });
+
+            rematchBtn.addEventListener('click', () => {
+                if (dataChannel && dataChannel.readyState === 'open') {
+                    dataChannel.send(JSON.stringify({ type: 'restart' }));
+                    restartGame();
+                } else {
+                    statusDisplay.textContent = 'Reconectando...';
+                    gameConfig.roomId = roomInput.value.trim();
+                    if (gameConfig.roomId) {
+                        connectToServer();
+                        upgradeScreen.classList.add('hidden');
+                        gameScreen.classList.remove('hidden');
+                        startGame();
+                    }
                 }
-            }
-        });
+            });
 
-        exitBtn.addEventListener('click', () => {
-            closeConnections();
-            gameConfig.status = 'waiting';
-            endGameScreen.style.display = 'none';
-            startScreen.classList.remove('hidden');
-            statusDisplay.textContent = 'Pronto para jogar novamente';
-        });
+            exitBtn.addEventListener('click', () => {
+                closeConnections();
+                gameConfig.status = 'waiting';
+                endGameScreen.style.display = 'none';
+                startScreen.classList.remove('hidden');
+                statusDisplay.textContent = 'Pronto para jogar novamente';
+            });
 
-        window.addEventListener('load', initGame);
+            initGame();
+        });
     </script>
 </body>
 </html>
